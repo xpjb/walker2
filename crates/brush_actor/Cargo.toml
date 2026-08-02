@@ -1,0 +1,18 @@
+[package]
+name = "brush_actor"
+version = "0.1.0"
+edition = "2021"
+description = "Procedural convex-brush characters driven by walker2 locomotion."
+
+[dependencies]
+glam = "0.30"
+walker2 = { path = "../.." }
+
+[dev-dependencies]
+bytemuck = { version = "1", features = ["derive"] }
+chad = { path = "../../../chad" }
+png = "0.17"
+
+[[example]]
+name = "actor_lab"
+path = "examples/actor_lab.rs"

@@ -112,6 +112,24 @@ to change speed, and `[`/`]` or the mouse wheel to zoom. Capture mode
 writes three deterministic PNG review frames per scenario; they are
 human-review artifacts, not pixel-equality tests.
 
+### Brush actor consumer
+
+The workspace member `brush_actor` compiles convex planar brushes into
+bone-local meshes, provides parameterized marine and ogre recipes, and maps
+`Walker::leg_chain()` plus `RigSignals` into a rigid character skeleton. Its
+`actor_lab` example uses the sibling `chad` crate for interactive wgpu
+presentation and native headless screenshots.
+
+```bash
+cargo run -p brush_actor --example actor_lab
+cargo run -p brush_actor --example actor_lab -- \
+  --capture target/brush_actor/marine_ogre.png 5.5
+```
+
+The lab loops through walking, sprinting, strafing, and turn-in-place.
+Space pauses, `R` resets, and `V` changes camera side. Textures are
+procedural, palette-limited, nearest-cell patterns applied per brush face;
+brush geometry is compiled once and only rigid transforms change per frame.
 
 ## Outputs
 

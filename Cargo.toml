@@ -4,6 +4,11 @@ version = "0.1.0"
 edition = "2021"
 description = "Procedural biped walker locomotion library: capture-point step planning, XPBD stance constraints, Froude-scalable, renderer-agnostic."
 
+[workspace]
+members = [".", "crates/brush_actor"]
+default-members = ["."]
+resolver = "2"
+
 [dependencies]
 glam = "0.30"
 
