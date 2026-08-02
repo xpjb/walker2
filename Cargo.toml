@@ -1,0 +1,11 @@
+[package]
+name = "walker2"
+version = "0.1.0"
+edition = "2021"
+description = "Procedural biped walker locomotion library: capture-point step planning, XPBD stance constraints, Froude-scalable, renderer-agnostic."
+
+[dependencies]
+glam = "0.30"
+
+[profile.dev]
+opt-level = 1
