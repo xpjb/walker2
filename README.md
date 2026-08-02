@@ -121,8 +121,10 @@ character leg. `PoseDriver` adds a direction-aware rigid-boot rocker: forward
 steps arrive on a virtual heel, pass through foot-flat, and lift around a
 virtual forefoot ball; the resulting ankle target feeds the two-bone solve.
 Strafes and stationary turns suppress the forward roll. The driver also
-spring-smooths torso twist and arm swing, while the lab interpolates complete
-pose palettes for rendering. The ogre keeps scale-driven slower cadence without
+spring-smooths torso twist and contralateral arm swing. Arm directions stay
+body/gravity-aligned rather than inheriting the ogre's torso hunch, and relaxed
+forearms bend toward the character's front. The lab interpolates complete pose
+palettes for rendering. The ogre keeps scale-driven slower cadence without
 an unchecked absolute Froude speedup. The `actor_lab` example uses the sibling
 `chad` crate for interactive wgpu presentation and native headless screenshots.
 

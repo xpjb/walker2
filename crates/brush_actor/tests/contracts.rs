@@ -121,6 +121,45 @@ fn persistent_pose_driver_removes_plant_discontinuities() {
     assert!(max_smooth_torso_step < 0.08, "{max_smooth_torso_step}");
 }
 
+#[test]
+fn arms_swing_contralaterally_without_inheriting_hunch() {
+    let ground = Flat;
+    let model = ActorModel::ogre();
+    let mut walker = Walker::new_at(WalkerSpec::biped(), &ground, 0.0, 0.0, 0.0, 0.5);
+
+    let idle_pose = pose_walker(&walker, &model.morphology);
+    let idle_upper = bone_direction(&idle_pose, Bone::RightUpperArm);
+    let idle_forearm = bone_direction(&idle_pose, Bone::RightForearm);
+    assert!(idle_upper.z.abs() < 1.0e-3, "{idle_upper:?}");
+    assert!(idle_forearm.z > 0.20, "{idle_forearm:?}");
+
+    let mut phased_samples = 0;
+    for _ in 0..240 {
+        walker.step(&ground, WalkerCommand::walk(Vec3::Z, 0.0), 1.0 / 60.0);
+        let signals = walker.signals();
+        let right_foot =
+            Quat::from_rotation_y(-signals.yaw) * (walker.leg_chain(1).foot - signals.pos);
+        if right_foot.z.abs() < 0.18 {
+            continue;
+        }
+        let pose = pose_walker(&walker, &model.morphology);
+        let left_arm =
+            Quat::from_rotation_y(-signals.yaw) * bone_direction(&pose, Bone::LeftUpperArm);
+        assert!(
+            left_arm.z * right_foot.z > 0.0,
+            "left arm {left_arm:?} did not follow contralateral foot {right_foot:?}"
+        );
+        phased_samples += 1;
+    }
+    assert!(phased_samples > 20, "{phased_samples}");
+}
+
+fn bone_direction(pose: &PosePalette, bone: Bone) -> Vec3 {
+    pose.transforms[bone as usize]
+        .transform_vector3(Vec3::NEG_Y)
+        .normalize()
+}
+
 fn rotation_step(previous: &PosePalette, current: &PosePalette, bone: Bone) -> f32 {
     let rotation = |pose: &PosePalette| -> Quat {
         pose.transforms[bone as usize]

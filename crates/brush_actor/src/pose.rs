@@ -85,8 +85,8 @@ impl PoseDriver {
         let left_foot_local = inverse_body * (left_chain.foot - signals.pos);
         let right_foot_local = inverse_body * (right_chain.foot - signals.pos);
         let swing_targets = [
-            (-left_foot_local.z * 0.75).clamp(-0.65, 0.65),
-            (-right_foot_local.z * 0.75).clamp(-0.65, 0.65),
+            (right_foot_local.z * 0.75).clamp(-0.65, 0.65),
+            (left_foot_local.z * 0.75).clamp(-0.65, 0.65),
         ];
         let foot_roll_targets = [
             foot_roll_target(&signals, &left_chain, morphology, 0),
@@ -130,8 +130,8 @@ pub fn pose_walker(walker: &Walker, morphology: &Morphology) -> PosePalette {
         .map(|support| angle_delta(support, signals.yaw).clamp(-0.34, 0.34))
         .unwrap_or(0.0);
     let arm_swing = [
-        (-(inverse_body * (left_chain.foot - signals.pos)).z * 0.75).clamp(-0.65, 0.65),
-        (-(inverse_body * (right_chain.foot - signals.pos)).z * 0.75).clamp(-0.65, 0.65),
+        ((inverse_body * (right_chain.foot - signals.pos)).z * 0.75).clamp(-0.65, 0.65),
+        ((inverse_body * (left_chain.foot - signals.pos)).z * 0.75).clamp(-0.65, 0.65),
     ];
     let foot_roll = [
         foot_roll_target(&signals, &left_chain, morphology, 0),
@@ -168,6 +168,7 @@ fn compose_pose(
         * Mat4::from_quat(Quat::from_rotation_y(support_twist * 0.28))
         * Mat4::from_quat(Quat::from_rotation_x(morphology.hunch));
     let torso = body * torso_local;
+    let arm_rotation = body_rotation * Quat::from_rotation_y(support_twist * 0.28);
     pose.transforms[Bone::Torso as usize] = torso;
     pose.transforms[Bone::Head as usize] = torso
         * Mat4::from_translation(Vec3::new(
@@ -179,6 +180,7 @@ fn compose_pose(
     pose_arm(
         &mut pose,
         torso,
+        arm_rotation,
         -1.0,
         arm_swing[0],
         morphology,
@@ -187,6 +189,7 @@ fn compose_pose(
     pose_arm(
         &mut pose,
         torso,
+        arm_rotation,
         1.0,
         arm_swing[1],
         morphology,
@@ -232,6 +235,7 @@ fn body_rotation(signals: &walker2::RigSignals) -> Quat {
 fn pose_arm(
     pose: &mut PosePalette,
     torso: Mat4,
+    arm_rotation: Quat,
     side: f32,
     swing: f32,
     morphology: &Morphology,
@@ -242,12 +246,11 @@ fn pose_arm(
         morphology.torso_height * 0.30,
         0.0,
     ));
-    let torso_rotation = Quat::from_mat4(&torso);
     let upper_direction =
-        torso_rotation * Vec3::new(side * 0.08, -swing.cos(), swing.sin()).normalize();
+        arm_rotation * Vec3::new(side * 0.08, -swing.cos(), swing.sin()).normalize();
     let elbow = shoulder + upper_direction * morphology.upper_arm_length;
-    let forearm_angle = swing * 0.55 - 0.28;
-    let forearm_direction = torso_rotation
+    let forearm_angle = swing * 0.55 + 0.28;
+    let forearm_direction = arm_rotation
         * Vec3::new(side * 0.04, -forearm_angle.cos(), forearm_angle.sin()).normalize();
     let wrist = elbow + forearm_direction * morphology.forearm_length;
     let hand_end = wrist + forearm_direction * morphology.hand_length;
