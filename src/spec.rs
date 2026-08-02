@@ -24,7 +24,11 @@ impl Pair {
 
     #[inline]
     pub fn at(self, sprint: bool) -> f32 {
-        if sprint { self.sprint } else { self.walk }
+        if sprint {
+            self.sprint
+        } else {
+            self.walk
+        }
     }
 }
 
@@ -180,12 +184,20 @@ impl WalkerSpec {
 
     #[inline]
     pub fn traction(&self, sprint: bool) -> &TractionParams {
-        if sprint { &self.traction_sprint } else { &self.traction_walk }
+        if sprint {
+            &self.traction_sprint
+        } else {
+            &self.traction_walk
+        }
     }
 
     #[inline]
     pub fn slip(&self, sprint: bool) -> &SlipParams {
-        if sprint { &self.slip_sprint } else { &self.slip_walk }
+        if sprint {
+            &self.slip_sprint
+        } else {
+            &self.slip_walk
+        }
     }
 
     /// The proven baseline: petrogradrevival's reverse-joint biped mech.
@@ -268,10 +280,26 @@ impl WalkerSpec {
             footfall_base: 0.72,
             yaw_stiffness: 8.0,
             yaw_damping: 4.2,
-            pitch_motor: AxisMotor { max_speed: 0.70, max_accel: 6.6, stiffness: 13.4 },
-            pitch_motor_fast: AxisMotor { max_speed: 0.78, max_accel: 7.4, stiffness: 13.4 },
-            roll_motor: AxisMotor { max_speed: 0.76, max_accel: 7.2, stiffness: 14.2 },
-            roll_motor_fast: AxisMotor { max_speed: 0.84, max_accel: 8.2, stiffness: 14.2 },
+            pitch_motor: AxisMotor {
+                max_speed: 0.70,
+                max_accel: 6.6,
+                stiffness: 13.4,
+            },
+            pitch_motor_fast: AxisMotor {
+                max_speed: 0.78,
+                max_accel: 7.4,
+                stiffness: 13.4,
+            },
+            roll_motor: AxisMotor {
+                max_speed: 0.76,
+                max_accel: 7.2,
+                stiffness: 14.2,
+            },
+            roll_motor_fast: AxisMotor {
+                max_speed: 0.84,
+                max_accel: 8.2,
+                stiffness: 14.2,
+            },
             fast_twitch: false,
             sprint_like_speed: 7.0,
 
@@ -371,10 +399,26 @@ impl WalkerSpec {
             footfall_base: 0.62,
             yaw_stiffness: 7.0,
             yaw_damping: 3.6,
-            pitch_motor: AxisMotor { max_speed: 0.70, max_accel: 6.6, stiffness: 13.4 },
-            pitch_motor_fast: AxisMotor { max_speed: 0.78, max_accel: 7.4, stiffness: 13.4 },
-            roll_motor: AxisMotor { max_speed: 0.76, max_accel: 7.2, stiffness: 14.2 },
-            roll_motor_fast: AxisMotor { max_speed: 0.84, max_accel: 8.2, stiffness: 14.2 },
+            pitch_motor: AxisMotor {
+                max_speed: 0.70,
+                max_accel: 6.6,
+                stiffness: 13.4,
+            },
+            pitch_motor_fast: AxisMotor {
+                max_speed: 0.78,
+                max_accel: 7.4,
+                stiffness: 13.4,
+            },
+            roll_motor: AxisMotor {
+                max_speed: 0.76,
+                max_accel: 7.2,
+                stiffness: 14.2,
+            },
+            roll_motor_fast: AxisMotor {
+                max_speed: 0.84,
+                max_accel: 8.2,
+                stiffness: 14.2,
+            },
             fast_twitch: false,
             sprint_like_speed: 7.0,
 
@@ -476,10 +520,26 @@ impl WalkerSpec {
             footfall_base: 0.48,
             yaw_stiffness: 9.0,
             yaw_damping: 4.5,
-            pitch_motor: AxisMotor { max_speed: 0.70, max_accel: 6.6, stiffness: 13.4 },
-            pitch_motor_fast: AxisMotor { max_speed: 0.78, max_accel: 7.4, stiffness: 13.4 },
-            roll_motor: AxisMotor { max_speed: 0.76, max_accel: 7.2, stiffness: 14.2 },
-            roll_motor_fast: AxisMotor { max_speed: 0.84, max_accel: 8.2, stiffness: 14.2 },
+            pitch_motor: AxisMotor {
+                max_speed: 0.70,
+                max_accel: 6.6,
+                stiffness: 13.4,
+            },
+            pitch_motor_fast: AxisMotor {
+                max_speed: 0.78,
+                max_accel: 7.4,
+                stiffness: 13.4,
+            },
+            roll_motor: AxisMotor {
+                max_speed: 0.76,
+                max_accel: 7.2,
+                stiffness: 14.2,
+            },
+            roll_motor_fast: AxisMotor {
+                max_speed: 0.84,
+                max_accel: 8.2,
+                stiffness: 14.2,
+            },
             fast_twitch: false,
             sprint_like_speed: 7.0,
 

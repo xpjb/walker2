@@ -9,7 +9,10 @@
 //!
 //! Run: `cargo run --example 07_scale_froude`
 
+mod shared;
+
 use glam::Vec3;
+use shared::scenarios::{DT, SCALES, SCALE_MEASURE, SCALE_WARMUP};
 use walker2::testkit::{Checks, FlatGround};
 use walker2::{Walker, WalkerCommand, WalkerSpec};
 
@@ -22,12 +25,12 @@ fn run() -> i32 {
     let mut checks = Checks::new();
     let ground = FlatGround;
     let spec = WalkerSpec::biped();
-    let dt = 1.0 / 60.0;
-    let warmup = 3.0f32;
-    let measure = 8.0f32;
+    let dt = DT;
+    let warmup = SCALE_WARMUP;
+    let measure = SCALE_MEASURE;
 
     let mut rows: Vec<(f32, f32, f32)> = Vec::new();
-    for scale in [0.28f32, 1.0, 4.0] {
+    for scale in SCALES {
         let mut walker = Walker::new_at(spec, &ground, 0.0, 0.0, 0.0, scale);
         let mut t = 0.0f32;
         let mut speed_sum = 0.0;

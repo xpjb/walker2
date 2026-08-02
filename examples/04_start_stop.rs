@@ -7,9 +7,12 @@
 //!
 //! Run: `cargo run --example 04_start_stop`
 
+mod shared;
+
 use glam::Vec3;
+use shared::scenarios::{self, BRAKE_AT, DT, START_STOP_DURATION};
 use walker2::testkit::{write_trace_svg, Checks, FlatGround, Runner};
-use walker2::{Walker, WalkerCommand, WalkerSpec};
+use walker2::{Walker, WalkerSpec};
 
 fn main() {
     std::process::exit(run());
@@ -21,17 +24,11 @@ fn run() -> i32 {
     let ground = FlatGround;
     let spec = WalkerSpec::biped();
     let mut walker = Walker::new(spec, &ground);
-    let mut runner = Runner::new(1.0 / 60.0);
+    let mut runner = Runner::new(DT);
 
-    let brake_at = 6.0;
-    runner.run(&mut walker, &ground, 10.0, |t, _| {
-        if t < 1.0 {
-            WalkerCommand::IDLE
-        } else if t < brake_at {
-            WalkerCommand::sprint(Vec3::Z, 0.0)
-        } else {
-            WalkerCommand::IDLE
-        }
+    let brake_at = BRAKE_AT;
+    runner.run(&mut walker, &ground, START_STOP_DURATION, |t, _| {
+        scenarios::start_stop_command(t)
     });
 
     // Time to 90% sprint speed after the command flips on at t=1.
@@ -63,7 +60,11 @@ fn run() -> i32 {
         .map(|s| s.pos.z)
         .unwrap_or(0.0);
     let final_pos = runner.samples.last().unwrap().pos.z;
-    checks.check_le("brake overshoot (m)", final_pos - brake_pos, spec.speed.sprint * 0.9);
+    checks.check_le(
+        "brake overshoot (m)",
+        final_pos - brake_pos,
+        spec.speed.sprint * 0.9,
+    );
 
     // Cart-pole signature: brake-window plants land AHEAD of the COM
     // (positive plant.z - com.z), launch-window plants land at/behind it.
@@ -102,6 +103,10 @@ fn run() -> i32 {
     checks.check_le("same-foot double steps", v.total_same_foot as f32, 1.0);
     checks.check_le("max tilt (rad)", runner.max_tilt(), 0.25);
     runner.print_reports();
-    let _ = write_trace_svg("target/traces/04_start_stop.svg", &runner, "04 sprint launch + hard brake");
+    let _ = write_trace_svg(
+        "target/traces/04_start_stop.svg",
+        &runner,
+        "04 sprint launch + hard brake",
+    );
     checks.finish("04_start_stop")
 }

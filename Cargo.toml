@@ -7,5 +7,19 @@ description = "Procedural biped walker locomotion library: capture-point step pl
 [dependencies]
 glam = "0.30"
 
+[features]
+visual-example = []
+
+[dev-dependencies]
+font8x8 = "0.3"
+pixels = "0.15"
+png = "0.17"
+winit = "0.30"
+
+[[example]]
+name = "visual"
+path = "examples/visual/main.rs"
+required-features = ["visual-example"]
+
 [profile.dev]
 opt-level = 1

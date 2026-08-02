@@ -9,7 +9,10 @@
 //!
 //! Run: `cargo run --example 03_strafe_backpedal`
 
+mod shared;
+
 use glam::Vec3;
+use shared::scenarios::{self, DT, MOVE_PHASE_SECONDS};
 use walker2::testkit::{write_trace_svg, Checks, FlatGround, Runner};
 use walker2::{Walker, WalkerCommand, WalkerSpec};
 
@@ -23,30 +26,30 @@ fn run() -> i32 {
     let ground = FlatGround;
     let spec = WalkerSpec::biped();
     let mut walker = Walker::new(spec, &ground);
-    let mut runner = Runner::new(1.0 / 60.0);
+    let mut runner = Runner::new(DT);
 
     let mut max_yaw: f32 = 0.0;
 
     // Phase 1: strafe right.
     let p0 = walker.position();
-    runner.run(&mut walker, &ground, 6.0, |_, w| {
-        WalkerCommand::walk(Vec3::X, 0.0).tap_yaw(&mut max_yaw, w)
+    runner.run(&mut walker, &ground, MOVE_PHASE_SECONDS, |t, w| {
+        scenarios::movement_command(t).tap_yaw(&mut max_yaw, w)
     });
     let p1 = walker.position();
     checks.check_ge("strafe +X distance (6s)", p1.x - p0.x, 8.0);
     checks.check_le("strafe lateral drift |z|", (p1.z - p0.z).abs(), 2.5);
 
     // Phase 2: backpedal.
-    runner.run(&mut walker, &ground, 6.0, |_, w| {
-        WalkerCommand::walk(-Vec3::Z, 0.0).tap_yaw(&mut max_yaw, w)
+    runner.run(&mut walker, &ground, MOVE_PHASE_SECONDS, |t, w| {
+        scenarios::movement_command(t).tap_yaw(&mut max_yaw, w)
     });
     let p2 = walker.position();
     checks.check_ge("backpedal -Z distance (6s)", p1.z - p2.z, 10.0);
 
     // Phase 3: diagonal (forward-left), still facing +Z.
     let diag = Vec3::new(-1.0, 0.0, 1.0).normalize();
-    runner.run(&mut walker, &ground, 6.0, |_, w| {
-        WalkerCommand::walk(diag, 0.0).tap_yaw(&mut max_yaw, w)
+    runner.run(&mut walker, &ground, MOVE_PHASE_SECONDS, |t, w| {
+        scenarios::movement_command(t).tap_yaw(&mut max_yaw, w)
     });
     let p3 = walker.position();
     let diag_dist = (p3 - p2).dot(diag);
@@ -55,7 +58,11 @@ fn run() -> i32 {
     checks.check_le("facing held throughout (max |yaw| rad)", max_yaw, 0.10);
     let v = walker.validation();
     checks.check_le("same-foot double steps", v.total_same_foot as f32, 2.0);
-    checks.check_le("double-swing frames", v.total_double_swing_frames as f32, 0.0);
+    checks.check_le(
+        "double-swing frames",
+        v.total_double_swing_frames as f32,
+        0.0,
+    );
     println!(
         "  strafe {:.1}m, backpedal {:.1}m, diagonal {:.1}m, steps={}",
         p1.x - p0.x,

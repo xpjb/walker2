@@ -7,7 +7,10 @@
 //!
 //! Run: `cargo run --example 01_flat_walk`
 
+mod shared;
+
 use glam::Vec3;
+use shared::scenarios::{DT, FLAT_PHASE_SECONDS};
 use walker2::testkit::{write_trace_svg, Checks, FlatGround, Runner};
 use walker2::{Walker, WalkerCommand, WalkerSpec};
 
@@ -27,10 +30,14 @@ fn run() -> i32 {
     ] {
         println!("\n-- preset: {name} --");
         let mut walker = Walker::new(spec, &ground);
-        let mut runner = Runner::new(1.0 / 60.0);
-        runner.run(&mut walker, &ground, 8.0, |_, _| WalkerCommand::walk(Vec3::Z, 0.0));
+        let mut runner = Runner::new(DT);
+        runner.run(&mut walker, &ground, FLAT_PHASE_SECONDS, |_, _| {
+            WalkerCommand::walk(Vec3::Z, 0.0)
+        });
         let walk_speed = runner.avg_speed_last(4.0);
-        runner.run(&mut walker, &ground, 8.0, |_, _| WalkerCommand::sprint(Vec3::Z, 0.0));
+        runner.run(&mut walker, &ground, FLAT_PHASE_SECONDS, |_, _| {
+            WalkerCommand::sprint(Vec3::Z, 0.0)
+        });
         let sprint_speed = runner.avg_speed_last(4.0);
 
         checks.check_near(
@@ -46,7 +53,11 @@ fn run() -> i32 {
             spec.speed.sprint * 0.25,
         );
         let v = walker.validation();
-        checks.check_le(&format!("{name}: same-foot double steps"), v.total_same_foot as f32, 1.0);
+        checks.check_le(
+            &format!("{name}: same-foot double steps"),
+            v.total_same_foot as f32,
+            1.0,
+        );
         checks.check_le(
             &format!("{name}: double-swing frames"),
             v.total_double_swing_frames as f32,
@@ -62,7 +73,11 @@ fn run() -> i32 {
         runner.print_reports();
 
         if name == "biped" {
-            let _ = write_trace_svg("target/traces/01_flat_walk.svg", &runner, "01 flat walk+sprint (biped)");
+            let _ = write_trace_svg(
+                "target/traces/01_flat_walk.svg",
+                &runner,
+                "01 flat walk+sprint (biped)",
+            );
         }
     }
 

@@ -23,7 +23,14 @@ pub struct WalkerSpawnDesc {
 
 impl WalkerSpawnDesc {
     pub fn new(spec: WalkerSpec, x: f32, z: f32, yaw: f32) -> Self {
-        Self { spec, x, z, yaw, scale: 1.0, fidelity: Fidelity::Full }
+        Self {
+            spec,
+            x,
+            z,
+            yaw,
+            scale: 1.0,
+            fidelity: Fidelity::Full,
+        }
     }
 
     pub fn with_scale(mut self, scale: f32) -> Self {
@@ -61,7 +68,10 @@ impl WalkerWorld {
     pub fn spawn<G: GroundQuery>(&mut self, ground: &G, desc: WalkerSpawnDesc) -> WalkerHandle {
         let mut walker = Walker::new_at(desc.spec, ground, desc.x, desc.z, desc.yaw, desc.scale);
         walker.set_fidelity(desc.fidelity);
-        let slot = Slot { walker, command: WalkerCommand::IDLE };
+        let slot = Slot {
+            walker,
+            command: WalkerCommand::IDLE,
+        };
         if let Some(index) = self.free.pop() {
             let generation = self.generations[index as usize].wrapping_add(1).max(1);
             self.generations[index as usize] = generation;
@@ -71,7 +81,10 @@ impl WalkerWorld {
         let index = self.slots.len() as u32;
         self.slots.push(Some(slot));
         self.generations.push(1);
-        WalkerHandle { index, generation: 1 }
+        WalkerHandle {
+            index,
+            generation: 1,
+        }
     }
 
     pub fn despawn(&mut self, handle: WalkerHandle) -> bool {

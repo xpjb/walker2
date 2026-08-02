@@ -174,7 +174,10 @@ impl Walker {
         scale: f32,
     ) -> Self {
         let scale = scale.max(0.05);
-        let ground = ScaledGround { inner: terrain, scale };
+        let ground = ScaledGround {
+            inner: terrain,
+            scale,
+        };
         let terrain = &ground;
         let x = x / scale;
         let z = z / scale;
@@ -292,7 +295,10 @@ impl Walker {
         let scale = self.scale;
         std::mem::take(&mut self.pending_footfalls)
             .into_iter()
-            .map(|f| FootfallEvent { pos: f.pos * scale, strength: f.strength })
+            .map(|f| FootfallEvent {
+                pos: f.pos * scale,
+                strength: f.strength,
+            })
             .collect()
     }
 
@@ -322,7 +328,11 @@ impl Walker {
         let sv = s.sqrt();
         let leg = |i: usize| LegSignal {
             contact: self.legs[i].is_stance(),
-            swing_t: if self.legs[i].is_stance() { 0.0 } else { self.legs[i].swing_t },
+            swing_t: if self.legs[i].is_stance() {
+                0.0
+            } else {
+                self.legs[i].swing_t
+            },
             foot: self.legs[i].foot * s,
             target: self.legs[i].swing_target * s,
             side: self.legs[i].side,
@@ -368,7 +378,11 @@ impl Walker {
             hip: hip * s,
             knee: knee * s,
             hock: hock * s,
-            mid: if self.spec.mid_link > 0.01 { Some(mid * s) } else { None },
+            mid: if self.spec.mid_link > 0.01 {
+                Some(mid * s)
+            } else {
+                None
+            },
             foot: end * s,
         }
     }
@@ -377,7 +391,11 @@ impl Walker {
     /// feet are far enough apart to define one.
     pub fn support_yaw(&self) -> Option<f32> {
         let pick = |leg: &Leg| {
-            if leg.is_stance() { leg.anchor } else { leg.swing_target }
+            if leg.is_stance() {
+                leg.anchor
+            } else {
+                leg.swing_target
+            }
         };
         let left = pick(&self.legs[0]);
         let right = pick(&self.legs[1]);
@@ -398,7 +416,10 @@ impl Walker {
         // accelerations (incl. gravity) are scale-invariant while world
         // speeds/cadence scale by sqrt(scale) — a giant genuinely moves
         // ponderously rather than being a linearly-fast copy.
-        let ground = ScaledGround { inner: terrain, scale: self.scale };
+        let ground = ScaledGround {
+            inner: terrain,
+            scale: self.scale,
+        };
         let terrain = &ground;
         let dt = dt / self.scale.sqrt();
         self.time += dt;
@@ -483,16 +504,32 @@ impl Walker {
                 n += 1.0;
             }
         }
-        let base = if n > 0.0 { sum / n } else { terrain.height_at(self.pos.x, self.pos.z) };
+        let base = if n > 0.0 {
+            sum / n
+        } else {
+            terrain.height_at(self.pos.x, self.pos.z)
+        };
         let raw_target = base + self.spec.body_height();
         if !self.support_y_ready {
             self.support_y = self.pos.y;
             self.support_y_vel = 0.0;
             self.support_y_ready = true;
         }
-        drive_scalar_motor(&mut self.support_y, &mut self.support_y_vel, raw_target, dt, 2.4, 9.0, 6.4);
+        drive_scalar_motor(
+            &mut self.support_y,
+            &mut self.support_y_vel,
+            raw_target,
+            dt,
+            2.4,
+            9.0,
+            6.4,
+        );
         self.pos.y = self.support_y;
-        self.vel.y = if dt > 0.0 { (self.pos.y - self.prev_pos.y) / dt } else { 0.0 };
+        self.vel.y = if dt > 0.0 {
+            (self.pos.y - self.prev_pos.y) / dt
+        } else {
+            0.0
+        };
 
         // Direct attitude: terrain lean + acceleration lean.
         let normal = terrain.normal_at(self.pos.x, self.pos.z);
@@ -507,8 +544,16 @@ impl Walker {
         let prev_roll = self.roll;
         self.pitch += (target_pitch - self.pitch) * ka;
         self.roll += (target_roll - self.roll) * ka;
-        self.pitch_vel = if dt > 0.0 { (self.pitch - prev_pitch) / dt } else { 0.0 };
-        self.roll_vel = if dt > 0.0 { (self.roll - prev_roll) / dt } else { 0.0 };
+        self.pitch_vel = if dt > 0.0 {
+            (self.pitch - prev_pitch) / dt
+        } else {
+            0.0
+        };
+        self.roll_vel = if dt > 0.0 {
+            (self.roll - prev_roll) / dt
+        } else {
+            0.0
+        };
 
         // Stepping: strict alternation on a timer while moving; untwist /
         // leash re-plant when idle.
@@ -575,10 +620,13 @@ impl Walker {
         }
 
         // Light actuator/audio signals.
-        self.actuator_force = (self.support_y_vel.abs() * 0.30 + self.yaw_vel.abs() * 0.06).clamp(0.0, 1.0);
+        self.actuator_force =
+            (self.support_y_vel.abs() * 0.30 + self.yaw_vel.abs() * 0.06).clamp(0.0, 1.0);
         self.actuator_motion = (self.support_y_vel * 0.22 + self.yaw_vel * 0.05).clamp(-1.0, 1.0);
-        let speed_n = (Vec3::new(self.vel.x, 0.0, self.vel.z).length() / self.spec.speed.sprint).clamp(0.0, 1.0);
-        self.power_demand = (self.actuator_force * 0.30 + speed_n * 0.35 + input * 0.15).clamp(0.0, 1.0);
+        let speed_n = (Vec3::new(self.vel.x, 0.0, self.vel.z).length() / self.spec.speed.sprint)
+            .clamp(0.0, 1.0);
+        self.power_demand =
+            (self.actuator_force * 0.30 + speed_n * 0.35 + input * 0.15).clamp(0.0, 1.0);
         self.validate_gait(dt);
     }
 
@@ -608,8 +656,9 @@ impl Walker {
                         .length();
                         leg.anchor = terrain.point_at(leg.swing_target.x, leg.swing_target.z);
                         leg.foot = leg.anchor;
-                        let strength = (self.spec.footfall_base + step_len * 0.18 + body_speed * 0.045)
-                            .clamp(0.25, 1.8);
+                        let strength =
+                            (self.spec.footfall_base + step_len * 0.18 + body_speed * 0.045)
+                                .clamp(0.25, 1.8);
                         let pos = leg.anchor;
                         leg.cooldown = self.spec.step_cooldown;
                         self.pending_footfalls.push(FootfallEvent { pos, strength });
@@ -664,7 +713,10 @@ impl Walker {
             || self.pitch.abs() > 0.105
             || self.roll.abs() > 0.085;
         let intent = if tipping {
-            Intent { recover_weight: 1.0, ..intent }
+            Intent {
+                recover_weight: 1.0,
+                ..intent
+            }
         } else {
             intent
         };
@@ -727,7 +779,8 @@ impl Walker {
             0.0
         };
         let balance = self.balance_vector();
-        let raw_desired_vel = cmd.move_dir.normalize_or(Vec3::ZERO) * self.spec.speed.at(cmd.sprint);
+        let raw_desired_vel =
+            cmd.move_dir.normalize_or(Vec3::ZERO) * self.spec.speed.at(cmd.sprint);
         let recover_weight = self
             .control_risk(raw_desired_vel)
             .max(self.control_risk(desired_vel) * 0.5);
@@ -782,7 +835,8 @@ impl Walker {
         let lateral = intent.right * (side * self.spec.step_width);
         let walk_nominal = {
             let raibert = com + intent.forward * stride + velocity_error * 0.045 + lateral;
-            let capture_goal = Vec3::new(capture.x, 0.0, capture.z) + intent.forward * 0.58 + lateral;
+            let capture_goal =
+                Vec3::new(capture.x, 0.0, capture.z) + intent.forward * 0.58 + lateral;
             raibert.lerp(capture_goal, 0.34)
         };
 
@@ -809,8 +863,9 @@ impl Walker {
 
         let foot = self.legs[idx].foot;
         let planned = Vec3::new(nominal.x - foot.x, 0.0, nominal.z - foot.z);
-        let min_commit =
-            self.spec.commit_distance.at(intent.sprint) * (0.30 + 0.70 * speed_n) * intent.align_scale;
+        let min_commit = self.spec.commit_distance.at(intent.sprint)
+            * (0.30 + 0.70 * speed_n)
+            * intent.align_scale;
         let downrange = planned.dot(intent.forward);
         if intent.input >= 0.05 && downrange < min_commit {
             nominal += intent.forward * (min_commit - downrange);
@@ -824,7 +879,13 @@ impl Walker {
             let grade = terrain_grade_accel(n);
             let horiz = Vec3::new(self.vel.x, 0.0, self.vel.z);
             let fast = self.spec.fast_twitch;
-            let cap = if fast && intent.sprint { 15.5 } else if intent.sprint { 9.6 } else { 6.5 };
+            let cap = if fast && intent.sprint {
+                15.5
+            } else if intent.sprint {
+                9.6
+            } else {
+                6.5
+            };
             let command_accel = (intent.desired_vel - horiz).clamp_length_max(cap);
             let required = (command_accel + grade).clamp_length_max(cap + 0.5);
             let omega_sq = 9.81 / self.spec.body_height();
@@ -951,7 +1012,8 @@ impl Walker {
         let step = target_flat - foot;
         let desired_step = self.spec.desired_step.at(intent.sprint) * intent.align_scale;
         let step_len = step.length();
-        let short_step_cost = (desired_step - step_len).max(0.0).powi(2) * 0.35 * intent.input.max(0.25);
+        let short_step_cost =
+            (desired_step - step_len).max(0.0).powi(2) * 0.35 * intent.input.max(0.25);
         let velocity_cost = (intent.desired_vel.length()
             - Vec3::new(self.vel.x, 0.0, self.vel.z).length())
         .max(0.0)
@@ -961,7 +1023,10 @@ impl Walker {
         let posture_cost = self.chain_posture_cost_for(idx, candidate);
         let hip = self.hip_world(idx);
         let reach = hip.distance(candidate + Vec3::Y * 0.10);
-        let reach_cost = (reach / (self.spec.max_reach * 0.96) - 1.0).max(0.0).powi(2) * 80.0;
+        let reach_cost = (reach / (self.spec.max_reach * 0.96) - 1.0)
+            .max(0.0)
+            .powi(2)
+            * 80.0;
         let impact_cost = (candidate.y - self.legs[idx].foot.y).abs().powi(2) * 3.0;
         distance_from_nominal * 2.0
             + balance_cost
@@ -993,23 +1058,31 @@ impl Walker {
         let grade_accel = terrain_grade_accel(n);
         let horiz = Vec3::new(self.vel.x, 0.0, self.vel.z);
         let fast = self.spec.fast_twitch;
-        let cap = if fast && intent.sprint { 15.5 } else if intent.sprint { 9.6 } else { 6.5 };
+        let cap = if fast && intent.sprint {
+            15.5
+        } else if intent.sprint {
+            9.6
+        } else {
+            6.5
+        };
         let command_accel = (intent.desired_vel - horiz).clamp_length_max(cap);
-        let required_accel = (command_accel + grade_accel).clamp_length_max(if fast && intent.sprint {
-            16.0
-        } else if intent.sprint {
-            10.0
-        } else {
-            7.0
-        });
+        let required_accel =
+            (command_accel + grade_accel).clamp_length_max(if fast && intent.sprint {
+                16.0
+            } else if intent.sprint {
+                10.0
+            } else {
+                7.0
+            });
         let omega_sq = 9.81 / self.spec.body_height();
-        let support_offset = (required_accel / omega_sq).clamp_length_max(if fast && intent.sprint {
-            3.05
-        } else if intent.sprint {
-            1.34
-        } else {
-            0.96
-        });
+        let support_offset =
+            (required_accel / omega_sq).clamp_length_max(if fast && intent.sprint {
+                3.05
+            } else if intent.sprint {
+                1.34
+            } else {
+                0.96
+            });
         let predicted_com = self.com_projection() + horiz * 0.10;
         let desired_support = self.capture_point().lerp(predicted_com, 0.28) - support_offset;
         let err = support - desired_support;
@@ -1033,7 +1106,11 @@ impl Walker {
                 continue;
             }
             let foot = Vec3::new(self.legs[i].anchor.x, 0.0, self.legs[i].anchor.z);
-            let cooldown_penalty = if self.legs[i].cooldown > 0.0 { 1.50 } else { 0.0 };
+            let cooldown_penalty = if self.legs[i].cooldown > 0.0 {
+                1.50
+            } else {
+                0.0
+            };
             let alternation_penalty = if self.next_leg.min(1) == i { 0.0 } else { 0.75 };
             let score = foot.dot(recovery_dir) + cooldown_penalty + alternation_penalty;
             if best.map_or(true, |(_, s)| score < s) {
@@ -1077,8 +1154,15 @@ impl Walker {
         let target = target + Vec3::Y * 0.10;
         let cur_compound = desired_compound_len(hip, current_target, spec);
         let next_compound = desired_compound_len(hip, target, spec);
-        let (cur_front, cur_hock, cur_lower, cur_end) =
-            solve_chain_with_compound(hip, current_target, forward, right, side, cur_compound, spec);
+        let (cur_front, cur_hock, cur_lower, cur_end) = solve_chain_with_compound(
+            hip,
+            current_target,
+            forward,
+            right,
+            side,
+            cur_compound,
+            spec,
+        );
         let (next_front, next_hock, next_lower, next_end) =
             solve_chain_with_compound(hip, target, forward, right, side, next_compound, spec);
         let mut effort = cur_front.distance_squared(next_front) / (spec.hip_link * spec.hip_link)
@@ -1101,8 +1185,15 @@ impl Walker {
         let hip = self.hip_world(idx);
         let target = target + Vec3::Y * 0.10;
         let compound = desired_compound_len(hip, target, spec);
-        let (front_low, rear_hock, lower_hock, end) =
-            solve_chain_with_compound(hip, target, forward, right, self.legs[idx].side, compound, spec);
+        let (front_low, rear_hock, lower_hock, end) = solve_chain_with_compound(
+            hip,
+            target,
+            forward,
+            right,
+            self.legs[idx].side,
+            compound,
+            spec,
+        );
         if spec.mid_link > 0.01 {
             chain_posture_cost(
                 &[hip, front_low, rear_hock, lower_hock, end],
@@ -1125,7 +1216,11 @@ impl Walker {
                 continue;
             }
             let hip = self.hip_world(i);
-            let delta = Vec3::new(hip.x - self.legs[i].anchor.x, 0.0, hip.z - self.legs[i].anchor.z);
+            let delta = Vec3::new(
+                hip.x - self.legs[i].anchor.x,
+                0.0,
+                hip.z - self.legs[i].anchor.z,
+            );
             max_stretch = f32::max(max_stretch, delta.dot(forward));
         }
         max_stretch
@@ -1134,8 +1229,7 @@ impl Walker {
     fn start_swing(&mut self, idx: usize, target: Vec3) {
         let step_len = {
             let leg = &mut self.legs[idx];
-            let step_len =
-                Vec3::new(target.x - leg.foot.x, 0.0, target.z - leg.foot.z).length();
+            let step_len = Vec3::new(target.x - leg.foot.x, 0.0, target.z - leg.foot.z).length();
             leg.state = LegState::Swing;
             leg.swing_t = 0.0;
             leg.swing_start = leg.foot;
@@ -1191,8 +1285,20 @@ impl Walker {
         } else {
             (self.spec.pitch_motor, self.spec.roll_motor)
         };
-        drive_axis_motor(&mut self.pitch, &mut self.pitch_vel, target_pitch, dt, pitch_motor);
-        drive_axis_motor(&mut self.roll, &mut self.roll_vel, target_roll, dt, roll_motor);
+        drive_axis_motor(
+            &mut self.pitch,
+            &mut self.pitch_vel,
+            target_pitch,
+            dt,
+            pitch_motor,
+        );
+        drive_axis_motor(
+            &mut self.roll,
+            &mut self.roll_vel,
+            target_roll,
+            dt,
+            roll_motor,
+        );
     }
 
     /// Direct attitude target: terrain conformance + balance lean + the
@@ -1207,10 +1313,14 @@ impl Walker {
         let terrain_challenge = self.terrain_challenge(terrain, desired_vel);
         let capture_error = self.capture_point() - self.support_center();
         let local_capture = Quat::from_rotation_y(-self.yaw) * capture_error;
-        let balance_pitch = (-local_capture.z * if fast { 0.0075 } else { 0.010 })
-            .clamp(-if fast { 0.058 } else { 0.044 }, if fast { 0.058 } else { 0.044 });
-        let balance_roll = (local_capture.x * if fast { 0.011 } else { 0.015 })
-            .clamp(-if fast { 0.052 } else { 0.042 }, if fast { 0.052 } else { 0.042 });
+        let balance_pitch = (-local_capture.z * if fast { 0.0075 } else { 0.010 }).clamp(
+            -if fast { 0.058 } else { 0.044 },
+            if fast { 0.058 } else { 0.044 },
+        );
+        let balance_roll = (local_capture.x * if fast { 0.011 } else { 0.015 }).clamp(
+            -if fast { 0.052 } else { 0.042 },
+            if fast { 0.052 } else { 0.042 },
+        );
         let horiz = Vec3::new(self.vel.x, 0.0, self.vel.z);
         let sprint_like = desired_vel.length() > self.spec.sprint_like_speed;
         let command_accel = (desired_vel - horiz).clamp_length_max(if fast && sprint_like {
@@ -1220,14 +1330,23 @@ impl Walker {
         } else {
             8.0
         });
-        let required_accel = (command_accel + terrain_grade_accel(n)).clamp_length_max(
-            if fast && sprint_like { 16.0 } else if sprint_like { 10.0 } else { 8.8 },
-        );
+        let required_accel =
+            (command_accel + terrain_grade_accel(n)).clamp_length_max(if fast && sprint_like {
+                16.0
+            } else if sprint_like {
+                10.0
+            } else {
+                8.8
+            });
         let local_accel = Quat::from_rotation_y(-self.yaw) * required_accel;
-        let cart_pitch = (-(local_accel.z / 9.81) * if fast { 0.24 } else { 0.19 })
-            .clamp(-if fast { 0.052 } else { 0.036 }, if fast { 0.052 } else { 0.036 });
-        let cart_roll = ((local_accel.x / 9.81) * if fast { 0.19 } else { 0.15 })
-            .clamp(-if fast { 0.042 } else { 0.030 }, if fast { 0.042 } else { 0.030 });
+        let cart_pitch = (-(local_accel.z / 9.81) * if fast { 0.24 } else { 0.19 }).clamp(
+            -if fast { 0.052 } else { 0.036 },
+            if fast { 0.052 } else { 0.036 },
+        );
+        let cart_roll = ((local_accel.x / 9.81) * if fast { 0.19 } else { 0.15 }).clamp(
+            -if fast { 0.042 } else { 0.030 },
+            if fast { 0.042 } else { 0.030 },
+        );
         let pitch_limit = if fast { 0.104 } else { 0.070 }
             + terrain_challenge * 0.016
             + if sprint_like { 0.006 } else { 0.0 };
@@ -1280,8 +1399,16 @@ impl Walker {
             let (normal_load, extension) = self.stance_contact_load(i, cmd, desired_vel);
             let reach_factor =
                 (1.0 - ((extension - 0.82) / 0.20).clamp(0.0, 1.0) * 0.45).clamp(0.45, 1.0);
-            let normal_boost = if braking { params.brake_normal_boost } else { 1.0 };
-            let force_boost = if braking { params.brake_force_boost } else { 1.0 };
+            let normal_boost = if braking {
+                params.brake_normal_boost
+            } else {
+                1.0
+            };
+            let force_boost = if braking {
+                params.brake_force_boost
+            } else {
+                1.0
+            };
             let friction_limit = normal_load * normal_boost * params.friction * reach_factor;
             let actuator_limit = params.max_force * force_boost * reach_factor;
             let limit = friction_limit.min(actuator_limit).max(0.0);
@@ -1408,7 +1535,9 @@ impl Walker {
         } else {
             (risk * (0.38 + opposed * 0.48)).clamp(0.0, 0.82)
         };
-        desired_vel.lerp(recovery_goal, blend).clamp_length_max(speed_cap)
+        desired_vel
+            .lerp(recovery_goal, blend)
+            .clamp_length_max(speed_cap)
     }
 
     fn control_risk(&self, desired_vel: Vec3) -> f32 {
@@ -1437,7 +1566,9 @@ impl Walker {
         let omega = (9.81 / self.spec.body_height()).sqrt();
         let capture_residual = ((horiz - desired_vel) / omega).length();
         let residual_risk = ((capture_residual - 1.05) / 2.15).clamp(0.0, 1.0)
-            * wrong_way.max(command_opposes_balance * 0.85).max(idle_drift);
+            * wrong_way
+                .max(command_opposes_balance * 0.85)
+                .max(idle_drift);
         let balance_margin = self.com_balance_cost(self.pitch, self.roll).sqrt();
         let expected_margin = if desired_len > self.spec.sprint_like_speed {
             self.spec.risk_margin.2
@@ -1494,7 +1625,9 @@ impl Walker {
             let hip_flat = Vec3::new(self.pos.x + hip_offset.x, 0.0, self.pos.z + hip_offset.z);
             let foot_flat = Vec3::new(leg.anchor.x, 0.0, leg.anchor.z);
             let planar = hip_flat.distance(foot_flat);
-            let vertical = (target_len * target_len - planar * planar).max(0.45 * 0.45).sqrt();
+            let vertical = (target_len * target_len - planar * planar)
+                .max(0.45 * 0.45)
+                .sqrt();
             sum += leg.anchor.y + vertical - hip_offset.y;
             n += 1.0;
         }
@@ -1509,9 +1642,25 @@ impl Walker {
         let speed = Vec3::new(self.vel.x, 0.0, self.vel.z).length();
         let speed_n = (speed / self.spec.speed.sprint).clamp(0.0, 1.0);
         let fast = self.spec.fast_twitch;
-        let max_speed = if fast { 1.35 + speed_n * 1.25 } else { 0.88 + speed_n * 0.80 };
-        let max_accel = if fast { 6.4 + speed_n * 8.2 } else { 4.0 + speed_n * 5.0 };
-        drive_scalar_motor(&mut self.support_y, &mut self.support_y_vel, raw_target, dt, max_speed, max_accel, 6.8);
+        let max_speed = if fast {
+            1.35 + speed_n * 1.25
+        } else {
+            0.88 + speed_n * 0.80
+        };
+        let max_accel = if fast {
+            6.4 + speed_n * 8.2
+        } else {
+            4.0 + speed_n * 5.0
+        };
+        drive_scalar_motor(
+            &mut self.support_y,
+            &mut self.support_y_vel,
+            raw_target,
+            dt,
+            max_speed,
+            max_accel,
+            6.8,
+        );
         let c = self.pos.y - self.support_y;
         let compliance = 1.2e-4 + self.swing_wave() * 8.0e-5;
         self.project_scalar(c, Vec3::Y, compliance, dt);
@@ -1553,7 +1702,11 @@ impl Walker {
                 continue;
             }
             let hip = self.hip_world(i);
-            let delta = Vec3::new(hip.x - self.legs[i].anchor.x, 0.0, hip.z - self.legs[i].anchor.z);
+            let delta = Vec3::new(
+                hip.x - self.legs[i].anchor.x,
+                0.0,
+                hip.z - self.legs[i].anchor.z,
+            );
             let lateral = delta.dot(right);
             let excess = lateral.abs() - max_lateral;
             if excess <= 0.0 {
@@ -1606,7 +1759,14 @@ impl Walker {
         self.project_scalar_limited(c, grad, compliance, dt, f32::INFINITY);
     }
 
-    fn project_scalar_limited(&mut self, c: f32, grad: Vec3, compliance: f32, dt: f32, max_correction: f32) {
+    fn project_scalar_limited(
+        &mut self,
+        c: f32,
+        grad: Vec3,
+        compliance: f32,
+        dt: f32,
+        max_correction: f32,
+    ) {
         let w = 1.0;
         let alpha = compliance / (dt * dt);
         let denom = w * grad.length_squared() + alpha;
@@ -1642,14 +1802,22 @@ impl Walker {
             let fast = spec.fast_twitch;
             let stance = self.legs[i].is_stance();
             let max_speed = if fast {
-                if stance { 3.2 } else { 6.8 }
+                if stance {
+                    3.2
+                } else {
+                    6.8
+                }
             } else if stance {
                 2.1
             } else {
                 4.2
             };
             let max_accel = if fast {
-                if stance { 13.0 } else { 24.0 }
+                if stance {
+                    13.0
+                } else {
+                    24.0
+                }
             } else if stance {
                 8.5
             } else {
@@ -1677,9 +1845,21 @@ impl Walker {
                 .max(min_needed)
                 .clamp(compound_min_len(&spec), compound_max_len(&spec));
         }
-        let leg_force = if samples > 0.0 { force_sum / samples } else { 0.0 };
-        let leg_power = if samples > 0.0 { power_sum / samples } else { 0.0 };
-        let leg_motion = if force_sum > 0.001 { motion_sum / force_sum } else { 0.0 };
+        let leg_force = if samples > 0.0 {
+            force_sum / samples
+        } else {
+            0.0
+        };
+        let leg_power = if samples > 0.0 {
+            power_sum / samples
+        } else {
+            0.0
+        };
+        let leg_motion = if force_sum > 0.001 {
+            motion_sum / force_sum
+        } else {
+            0.0
+        };
         let body_force = self.support_y_vel.abs() * 0.36
             + self.pitch_vel.abs() * 0.14
             + self.roll_vel.abs() * 0.14
@@ -1699,10 +1879,9 @@ impl Walker {
         let speed = Vec3::new(self.vel.x, 0.0, self.vel.z).length();
         let speed_n = (speed / self.spec.speed.sprint).clamp(0.0, 1.0);
         let drive_n = (desired_vel.length() / self.spec.speed.sprint).clamp(0.0, 1.0);
-        let angular = (self.yaw_vel.abs() * 0.08
-            + self.pitch_vel.abs() * 0.08
-            + self.roll_vel.abs() * 0.08)
-            .clamp(0.0, 0.35);
+        let angular =
+            (self.yaw_vel.abs() * 0.08 + self.pitch_vel.abs() * 0.08 + self.roll_vel.abs() * 0.08)
+                .clamp(0.0, 0.35);
         let target = (self.power_demand * 0.58
             + self.actuator_force * 0.28
             + speed_n * 0.24
@@ -1806,7 +1985,8 @@ impl Walker {
         let cabin_jerk = vertical_jerk + angular_jerk * 0.35;
         let mut leg_use: f32 = 0.0;
         for i in 0..2 {
-            leg_use = leg_use.max(self.hip_world(i).distance(self.legs[i].foot) / self.spec.max_reach);
+            leg_use =
+                leg_use.max(self.hip_world(i).distance(self.legs[i].foot) / self.spec.max_reach);
         }
         self.prev_y_vel = self.vel.y;
         self.prev_pitch_vel = self.pitch_vel;
@@ -1851,8 +2031,24 @@ impl Walker {
         let rot = self.body_rotation();
         let spec = &self.spec;
 
-        push_part(out, PartRole::Hull, MeshKey::BOX, spec.hull_size, rot, self.pos + rot * spec.hull_offset, hull_tint);
-        push_part(out, PartRole::Pelvis, MeshKey::BOX, spec.pelvis_size, rot, self.pos + rot * spec.pelvis_offset, dark);
+        push_part(
+            out,
+            PartRole::Hull,
+            MeshKey::BOX,
+            spec.hull_size,
+            rot,
+            self.pos + rot * spec.hull_offset,
+            hull_tint,
+        );
+        push_part(
+            out,
+            PartRole::Pelvis,
+            MeshKey::BOX,
+            spec.pelvis_size,
+            rot,
+            self.pos + rot * spec.pelvis_offset,
+            dark,
+        );
         let left_hip = self.hip_world(0);
         let right_hip = self.hip_world(1);
         push_segment(out, PartRole::Pelvis, left_hip, right_hip, 0.22, dark);
@@ -1868,20 +2064,99 @@ impl Walker {
             } else {
                 desired_compound_len(hip, foot, spec)
             };
-            let (knee, hock, mid, end) =
-                solve_chain_with_compound(hip, foot, forward, right, self.legs[i].side, compound_len, spec);
-            push_part(out, PartRole::Hip, MeshKey::JOINT, Vec3::splat(0.30), rot, hip, accent);
-            push_oriented_box(out, PartRole::UpperLink, hip, knee, Vec3::new(0.42, 1.0, 0.50), right, dark);
-            push_oriented_box(out, PartRole::MiddleLink, knee, hock, Vec3::new(0.28, 1.0, 0.38), right, accent);
+            let (knee, hock, mid, end) = solve_chain_with_compound(
+                hip,
+                foot,
+                forward,
+                right,
+                self.legs[i].side,
+                compound_len,
+                spec,
+            );
+            push_part(
+                out,
+                PartRole::Hip,
+                MeshKey::JOINT,
+                Vec3::splat(0.30),
+                rot,
+                hip,
+                accent,
+            );
+            push_oriented_box(
+                out,
+                PartRole::UpperLink,
+                hip,
+                knee,
+                Vec3::new(0.42, 1.0, 0.50),
+                right,
+                dark,
+            );
+            push_oriented_box(
+                out,
+                PartRole::MiddleLink,
+                knee,
+                hock,
+                Vec3::new(0.28, 1.0, 0.38),
+                right,
+                accent,
+            );
             if spec.mid_link > 0.01 {
-                push_oriented_box(out, PartRole::MiddleLink, hock, mid, Vec3::new(0.24, 1.0, 0.34), right, hull_tint);
-                push_oriented_box(out, PartRole::LowerLink, mid, end, Vec3::new(0.34, 1.0, 0.42), right, dark);
+                push_oriented_box(
+                    out,
+                    PartRole::MiddleLink,
+                    hock,
+                    mid,
+                    Vec3::new(0.24, 1.0, 0.34),
+                    right,
+                    hull_tint,
+                );
+                push_oriented_box(
+                    out,
+                    PartRole::LowerLink,
+                    mid,
+                    end,
+                    Vec3::new(0.34, 1.0, 0.42),
+                    right,
+                    dark,
+                );
             } else {
-                push_oriented_box(out, PartRole::LowerLink, hock, end, Vec3::new(0.36, 1.0, 0.44), right, dark);
+                push_oriented_box(
+                    out,
+                    PartRole::LowerLink,
+                    hock,
+                    end,
+                    Vec3::new(0.36, 1.0, 0.44),
+                    right,
+                    dark,
+                );
             }
-            push_part(out, PartRole::MiddleLink, MeshKey::JOINT, Vec3::splat(0.20), rot, knee, accent);
-            push_part(out, PartRole::MiddleLink, MeshKey::JOINT, Vec3::splat(0.18), rot, hock, accent);
-            push_part(out, PartRole::Foot, MeshKey::JOINT, Vec3::splat(0.16), Quat::IDENTITY, end, foot_tint);
+            push_part(
+                out,
+                PartRole::MiddleLink,
+                MeshKey::JOINT,
+                Vec3::splat(0.20),
+                rot,
+                knee,
+                accent,
+            );
+            push_part(
+                out,
+                PartRole::MiddleLink,
+                MeshKey::JOINT,
+                Vec3::splat(0.18),
+                rot,
+                hock,
+                accent,
+            );
+            push_part(
+                out,
+                PartRole::Foot,
+                MeshKey::JOINT,
+                Vec3::splat(0.16),
+                Quat::IDENTITY,
+                end,
+                foot_tint,
+            );
             push_part(
                 out,
                 PartRole::Foot,
@@ -1940,11 +2215,19 @@ fn solve_chain_with_compound(
     let (front_low, _) = solve_two_bone(hip, foot, spec.hip_link, compound_len, front_pole);
     if spec.mid_link > 0.01 {
         let distal_len = spec.mid_link + spec.shin_link - 0.02;
-        let (rear_hock, _) = solve_two_bone(front_low, foot, spec.reverse_link, distal_len, rear_pole);
-        let (lower_hock, end) = solve_two_bone(rear_hock, foot, spec.mid_link, spec.shin_link, lower_pole);
+        let (rear_hock, _) =
+            solve_two_bone(front_low, foot, spec.reverse_link, distal_len, rear_pole);
+        let (lower_hock, end) =
+            solve_two_bone(rear_hock, foot, spec.mid_link, spec.shin_link, lower_pole);
         (front_low, rear_hock, lower_hock, end)
     } else {
-        let (rear_hock, end) = solve_two_bone(front_low, foot, spec.reverse_link, spec.shin_link, rear_pole);
+        let (rear_hock, end) = solve_two_bone(
+            front_low,
+            foot,
+            spec.reverse_link,
+            spec.shin_link,
+            rear_pole,
+        );
         (front_low, rear_hock, end, end)
     }
 }
@@ -1977,7 +2260,11 @@ fn solve_two_bone(root: Vec3, target: Vec3, l1: f32, l2: f32, pole: Vec3) -> (Ve
     let mut dist = to_target.length();
     let eps = 1.0e-4;
     let clamped = dist.clamp((l1 - l2).abs() + eps, l1 + l2 - eps);
-    let dir = if dist > eps { to_target / dist } else { Vec3::Y };
+    let dir = if dist > eps {
+        to_target / dist
+    } else {
+        Vec3::Y
+    };
     dist = clamped;
     let end = root + dir * dist;
     let a = ((l1 * l1 - l2 * l2) / (2.0 * dist) + dist * 0.5).clamp(-l1, l1);
@@ -2034,14 +2321,30 @@ fn drive_scalar_motor(
 }
 
 fn drive_axis_motor(value: &mut f32, velocity: &mut f32, target: f32, dt: f32, motor: AxisMotor) {
-    drive_scalar_motor(value, velocity, target, dt, motor.max_speed, motor.max_accel, motor.stiffness);
+    drive_scalar_motor(
+        value,
+        velocity,
+        target,
+        dt,
+        motor.max_speed,
+        motor.max_accel,
+        motor.stiffness,
+    );
 }
 
 pub(crate) fn angle_delta(to: f32, from: f32) -> f32 {
     (to - from).sin().atan2((to - from).cos())
 }
 
-fn push_part(out: &mut Vec<PartPose>, role: PartRole, mesh: MeshKey, scale: Vec3, rot: Quat, translation: Vec3, tint: Vec4) {
+fn push_part(
+    out: &mut Vec<PartPose>,
+    role: PartRole,
+    mesh: MeshKey,
+    scale: Vec3,
+    rot: Quat,
+    translation: Vec3,
+    tint: Vec4,
+) {
     out.push(PartPose {
         role,
         transform: Transform {
@@ -2067,15 +2370,38 @@ fn part_material(role: PartRole) -> u16 {
     }
 }
 
-fn push_segment(out: &mut Vec<PartPose>, role: PartRole, a: Vec3, b: Vec3, radius: f32, tint: Vec4) {
+fn push_segment(
+    out: &mut Vec<PartPose>,
+    role: PartRole,
+    a: Vec3,
+    b: Vec3,
+    radius: f32,
+    tint: Vec4,
+) {
     let d = b - a;
     let len = d.length().max(1.0e-4);
     let dir = d / len;
     let rot = Quat::from_rotation_arc(Vec3::Y, dir);
-    push_part(out, role, MeshKey::LIMB, Vec3::new(radius, len, radius), rot, a, tint);
+    push_part(
+        out,
+        role,
+        MeshKey::LIMB,
+        Vec3::new(radius, len, radius),
+        rot,
+        a,
+        tint,
+    );
 }
 
-fn push_oriented_box(out: &mut Vec<PartPose>, role: PartRole, a: Vec3, b: Vec3, scale: Vec3, pole: Vec3, tint: Vec4) {
+fn push_oriented_box(
+    out: &mut Vec<PartPose>,
+    role: PartRole,
+    a: Vec3,
+    b: Vec3,
+    scale: Vec3,
+    pole: Vec3,
+    tint: Vec4,
+) {
     let d = b - a;
     let len = d.length().max(1.0e-4);
     let y = d / len;
@@ -2088,5 +2414,13 @@ fn push_oriented_box(out: &mut Vec<PartPose>, role: PartRole, a: Vec3, b: Vec3, 
     let z = x.cross(y).normalize_or(Vec3::Z);
     let x = y.cross(z).normalize_or(x);
     let rot = Quat::from_mat3(&Mat3::from_cols(x, y, z));
-    push_part(out, role, MeshKey::BOX, Vec3::new(scale.x, len * scale.y, scale.z), rot, a + d * 0.5, tint);
+    push_part(
+        out,
+        role,
+        MeshKey::BOX,
+        Vec3::new(scale.x, len * scale.y, scale.z),
+        rot,
+        a + d * 0.5,
+        tint,
+    );
 }

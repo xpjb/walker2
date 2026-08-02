@@ -8,11 +8,13 @@
 //!
 //! Run: `cargo run --release --example 09_crowd_bench`
 
+mod shared;
+
+use shared::scenarios::{self, CROWD_SECONDS, CROWD_TIERS, DT};
 use std::time::Instant;
 
-use glam::Vec3;
 use walker2::testkit::{Checks, RollingGround};
-use walker2::{Fidelity, StepCtx, WalkerCommand, WalkerEvent, WalkerSpawnDesc, WalkerSpec, WalkerWorld};
+use walker2::{StepCtx, WalkerEvent, WalkerSpawnDesc, WalkerSpec, WalkerWorld};
 
 fn main() {
     std::process::exit(run());
@@ -21,24 +23,23 @@ fn main() {
 fn run() -> i32 {
     println!("== 09 crowd bench: 30 Full / 60 Reduced / 90 Kinematic, 10s on rolling ground ==");
     let mut checks = Checks::new();
-    let ground = RollingGround { amplitude: 0.5, wavelength: 11.0 };
+    let ground = RollingGround {
+        amplitude: 0.5,
+        wavelength: 11.0,
+    };
     let spec = WalkerSpec::biped();
-    let dt = 1.0 / 60.0;
-    let ticks = 600;
+    let dt = DT;
+    let ticks = (CROWD_SECONDS / DT).round() as usize;
 
     let mut total_footfalls = 0usize;
-    for (name, fidelity, count) in [
-        ("Full", Fidelity::Full, 30usize),
-        ("Reduced", Fidelity::Reduced, 60),
-        ("Kinematic", Fidelity::Kinematic, 90),
-    ] {
+    for (name, fidelity, count) in CROWD_TIERS {
         let mut world = WalkerWorld::default();
         let mut handles = Vec::new();
         for i in 0..count {
             let col = (i % 10) as f32;
             let row = (i / 10) as f32;
-            let desc = WalkerSpawnDesc::new(spec, col * 8.0, row * 8.0, 0.0)
-                .with_fidelity(fidelity);
+            let desc =
+                WalkerSpawnDesc::new(spec, col * 8.0, row * 8.0, 0.0).with_fidelity(fidelity);
             handles.push(world.spawn(&ground, desc));
         }
 
@@ -50,15 +51,12 @@ fn run() -> i32 {
             // Deterministic wandering: each walker orbits a drifting
             // waypoint; direction varies by index and time.
             for (i, &h) in handles.iter().enumerate() {
-                let phase = i as f32 * 0.61 + t * 0.25;
-                let dir = Vec3::new(phase.cos(), 0.0, phase.sin());
-                let sprint = i % 4 == 0;
-                world.set_command(
-                    h,
-                    WalkerCommand { move_dir: dir, face_yaw: phase, sprint },
-                );
+                world.set_command(h, scenarios::crowd_command(i, t));
             }
-            world.step(StepCtx { ground: &ground, dt });
+            world.step(StepCtx {
+                ground: &ground,
+                dt,
+            });
             world.drain_events(&mut events);
             footfalls += events
                 .iter()
@@ -86,7 +84,11 @@ fn run() -> i32 {
                 all_ok = false;
             }
         }
-        checks.check(&format!("{name}: all walkers finite & plausible height"), all_ok, format!("{count} walkers"));
+        checks.check(
+            &format!("{name}: all walkers finite & plausible height"),
+            all_ok,
+            format!("{count} walkers"),
+        );
     }
 
     checks.check_ge("footfall events flowing", total_footfalls as f32, 2000.0);

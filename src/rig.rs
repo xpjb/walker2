@@ -16,6 +16,11 @@ pub enum PartRole {
 
 /// Mesh archetype hint: a unit box, a unit-height limb cylinder, or a
 /// joint blob. Hosts may ignore this and key off `PartRole` alone.
+///
+/// The built-in `part_poses` convention centers boxes and joints at
+/// `Transform::translation`, with `scale` holding their full extents.
+/// Limbs instead start at `translation`, extend from local Y=0 to Y=1,
+/// use `scale.y` as their length, and use `scale.x`/`scale.z` as radii.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MeshKey(pub u16);
 

@@ -93,6 +93,26 @@ cargo run --example 01_flat_walk            # start of the ladder
 cargo run --release --example 09_crowd_bench
 ```
 
+### Visual gallery
+
+The `visual` example runs the same numbered scenario inputs in an
+interactive `pixels` gallery. It renders `Walker::part_poses()` with
+screen-space SDF capsules, joints, and rounded boxes, plus COM, balance,
+capture, facing, contact, target, footfall, terrain, and impulse overlays.
+
+```bash
+cargo run --features visual-example --example visual
+cargo run --features visual-example --example visual -- --scenario 04
+cargo run --features visual-example --example visual -- --capture-all target/visual
+```
+
+Use `1`-`9` to select a scenario, Space to pause, `.` to step one fixed
+tick, `R` to reset, `V` to change view, Tab to toggle overlays, `+`/`-`
+to change speed, and `[`/`]` or the mouse wheel to zoom. Capture mode
+writes three deterministic PNG review frames per scenario; they are
+human-review artifacts, not pixel-equality tests.
+
+
 ## Outputs
 
 - `Walker::signals() -> RigSignals` — pose-layer inputs: per-leg

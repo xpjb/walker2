@@ -10,23 +10,14 @@
 //! Run: `cargo run --example 08_fidelity_tiers` (use --release for
 //! meaningful timings)
 
+mod shared;
+
+use shared::scenarios::{self, DT, FIDELITIES, FIDELITY_DURATION};
 use std::time::Instant;
 
 use glam::Vec3;
 use walker2::testkit::{write_trace_svg, Checks, FlatGround, Runner};
 use walker2::{Fidelity, Walker, WalkerCommand, WalkerSpec};
-
-fn script(t: f32) -> WalkerCommand {
-    if t < 4.0 {
-        WalkerCommand::walk(Vec3::Z, 0.0)
-    } else if t < 8.0 {
-        WalkerCommand::sprint(Vec3::Z, 0.0)
-    } else if t < 10.0 {
-        WalkerCommand::face(2.0)
-    } else {
-        WalkerCommand::walk(Vec3::X, 2.0)
-    }
-}
 
 fn main() {
     std::process::exit(run());
@@ -37,19 +28,17 @@ fn run() -> i32 {
     let mut checks = Checks::new();
     let ground = FlatGround;
     let spec = WalkerSpec::biped();
-    let seconds = 13.0;
+    let seconds = FIDELITY_DURATION;
 
     let mut outcomes = Vec::new();
-    for (name, fidelity) in [
-        ("Full", Fidelity::Full),
-        ("Reduced", Fidelity::Reduced),
-        ("Kinematic", Fidelity::Kinematic),
-    ] {
+    for (name, fidelity) in FIDELITIES {
         let mut walker = Walker::new(spec, &ground);
         walker.set_fidelity(fidelity);
         let mut runner = Runner::new(1.0 / 60.0);
         let start = Instant::now();
-        runner.run(&mut walker, &ground, seconds, |t, _| script(t));
+        runner.run(&mut walker, &ground, seconds, |t, _| {
+            scenarios::fidelity_command(t)
+        });
         let elapsed = start.elapsed();
         let ticks = (seconds * 60.0) as u32;
         let pos = walker.position();
@@ -93,7 +82,7 @@ fn run() -> i32 {
 
     // Popping-free switching: walk on Full, then hop tiers mid-stride.
     let mut walker = Walker::new(spec, &ground);
-    let dt = 1.0 / 60.0;
+    let dt = DT;
     for i in 0..(4 * 60) {
         walker.step(&ground, WalkerCommand::walk(Vec3::Z, 0.0), dt);
         let _ = i;
@@ -103,7 +92,11 @@ fn run() -> i32 {
         walker.set_fidelity(fidelity);
         walker.step(&ground, WalkerCommand::walk(Vec3::Z, 0.0), dt);
         let jump = walker.position().distance(before);
-        checks.check_le(&format!("switch to {fidelity:?}: one-tick jump (m)"), jump, 0.40);
+        checks.check_le(
+            &format!("switch to {fidelity:?}: one-tick jump (m)"),
+            jump,
+            0.40,
+        );
         for _ in 0..60 {
             walker.step(&ground, WalkerCommand::walk(Vec3::Z, 0.0), dt);
         }

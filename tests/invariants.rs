@@ -31,23 +31,37 @@ fn planar_speed(walker: &Walker) -> f32 {
 
 #[test]
 fn leg_chain_preserves_link_lengths() {
-    for spec in [WalkerSpec::biped(), WalkerSpec::longstrider(), WalkerSpec::humanoid()] {
+    for spec in [
+        WalkerSpec::biped(),
+        WalkerSpec::longstrider(),
+        WalkerSpec::humanoid(),
+    ] {
         let ground = FlatGround;
         let mut walker = Walker::new(spec, &ground);
         // Walk a bit so the pose is generic, then measure.
-        run(&mut walker, &ground, 2.0, |_| WalkerCommand::walk(Vec3::Z, 0.0));
+        run(&mut walker, &ground, 2.0, |_| {
+            WalkerCommand::walk(Vec3::Z, 0.0)
+        });
         for i in 0..2 {
             let chain = walker.leg_chain(i);
             let d1 = chain.hip.distance(chain.knee);
             let d2 = chain.knee.distance(chain.hock);
             let d3 = chain.hock.distance(chain.foot);
-            assert!((d1 - spec.hip_link).abs() < 0.02, "hip link {d1} vs {}", spec.hip_link);
+            assert!(
+                (d1 - spec.hip_link).abs() < 0.02,
+                "hip link {d1} vs {}",
+                spec.hip_link
+            );
             assert!(
                 (d2 - spec.reverse_link).abs() < 0.02,
                 "reverse link {d2} vs {}",
                 spec.reverse_link
             );
-            assert!((d3 - spec.shin_link).abs() < 0.02, "shin link {d3} vs {}", spec.shin_link);
+            assert!(
+                (d3 - spec.shin_link).abs() < 0.02,
+                "shin link {d3} vs {}",
+                spec.shin_link
+            );
         }
     }
 }
@@ -63,7 +77,9 @@ fn all_presets_move_forward_under_sprint() {
             let ground = FlatGround;
             let mut walker = Walker::new(spec, &ground);
             walker.set_fidelity(fidelity);
-            run(&mut walker, &ground, 8.0, |_| WalkerCommand::sprint(Vec3::Z, 0.0));
+            run(&mut walker, &ground, 8.0, |_| {
+                WalkerCommand::sprint(Vec3::Z, 0.0)
+            });
             let z = walker.position().z;
             let expected = spec.speed.sprint * 8.0;
             assert!(
@@ -90,7 +106,9 @@ fn walk_speed_tracks_spec() {
     let spec = WalkerSpec::biped();
     let ground = FlatGround;
     let mut walker = Walker::new(spec, &ground);
-    run(&mut walker, &ground, 10.0, |_| WalkerCommand::walk(Vec3::Z, 0.0));
+    run(&mut walker, &ground, 10.0, |_| {
+        WalkerCommand::walk(Vec3::Z, 0.0)
+    });
     let speed = planar_speed(&walker);
     assert!(
         (speed - spec.speed.walk).abs() < spec.speed.walk * 0.25,
@@ -128,7 +146,10 @@ fn idle_magic_turn_untwists_feet() {
     // left of the right anchor.
     let right_axis = Vec3::new(walker.yaw().cos(), 0.0, -walker.yaw().sin());
     let lateral = (sig.legs[1].foot - sig.legs[0].foot).dot(right_axis);
-    assert!(lateral > 0.2, "feet crossed after untwist: lateral {lateral:.2}");
+    assert!(
+        lateral > 0.2,
+        "feet crossed after untwist: lateral {lateral:.2}"
+    );
 }
 
 #[test]
@@ -137,19 +158,35 @@ fn facing_decoupled_strafe_and_backpedal() {
     let ground = FlatGround;
     let mut walker = Walker::new(spec, &ground);
     // Face +Z the whole time; move +X (strafe) then -Z (backpedal).
-    run(&mut walker, &ground, 6.0, |_| WalkerCommand::walk(Vec3::X, 0.0));
+    run(&mut walker, &ground, 6.0, |_| {
+        WalkerCommand::walk(Vec3::X, 0.0)
+    });
     let after_strafe = walker.position();
-    assert!(after_strafe.x > 10.0, "strafe distance {:.1}", after_strafe.x);
-    assert!(walker.yaw().abs() < 0.10, "facing held during strafe: {:.2}", walker.yaw());
+    assert!(
+        after_strafe.x > 10.0,
+        "strafe distance {:.1}",
+        after_strafe.x
+    );
+    assert!(
+        walker.yaw().abs() < 0.10,
+        "facing held during strafe: {:.2}",
+        walker.yaw()
+    );
 
-    run(&mut walker, &ground, 6.0, |_| WalkerCommand::walk(-Vec3::Z, 0.0));
+    run(&mut walker, &ground, 6.0, |_| {
+        WalkerCommand::walk(-Vec3::Z, 0.0)
+    });
     let after_back = walker.position();
     assert!(
         after_back.z < after_strafe.z - 8.0,
         "backpedal distance {:.1}",
         after_strafe.z - after_back.z
     );
-    assert!(walker.yaw().abs() < 0.10, "facing held during backpedal: {:.2}", walker.yaw());
+    assert!(
+        walker.yaw().abs() < 0.10,
+        "facing held during backpedal: {:.2}",
+        walker.yaw()
+    );
     assert!(walker.validation().total_same_foot <= 2);
 }
 
@@ -158,11 +195,17 @@ fn sprint_brake_stops_quickly() {
     let spec = WalkerSpec::biped();
     let ground = FlatGround;
     let mut walker = Walker::new(spec, &ground);
-    run(&mut walker, &ground, 5.0, |_| WalkerCommand::sprint(Vec3::Z, 0.0));
+    run(&mut walker, &ground, 5.0, |_| {
+        WalkerCommand::sprint(Vec3::Z, 0.0)
+    });
     assert!(planar_speed(&walker) > spec.speed.sprint * 0.8);
     let brake_point = walker.position();
     run(&mut walker, &ground, 2.5, |_| WalkerCommand::IDLE);
-    assert!(planar_speed(&walker) < 0.5, "still moving at {:.2}", planar_speed(&walker));
+    assert!(
+        planar_speed(&walker) < 0.5,
+        "still moving at {:.2}",
+        planar_speed(&walker)
+    );
     let overshoot = walker.position().z - brake_point.z;
     assert!(
         overshoot < spec.speed.sprint * 0.9,
@@ -179,13 +222,20 @@ fn lateral_impulse_recovers_without_falling() {
     walker.apply_impulse(Vec3::X * 3.5);
     let steps_before = walker.validation().total_steps;
     run(&mut walker, &ground, 3.0, |_| WalkerCommand::IDLE);
-    assert!(planar_speed(&walker) < 0.6, "recovered speed {:.2}", planar_speed(&walker));
+    assert!(
+        planar_speed(&walker) < 0.6,
+        "recovered speed {:.2}",
+        planar_speed(&walker)
+    );
     assert!(
         walker.validation().total_steps > steps_before,
         "impulse should force recovery steps"
     );
     let (pitch, roll) = walker.cabin_tilt();
-    assert!(pitch.abs() < 0.20 && roll.abs() < 0.20, "tilt bounded after recovery");
+    assert!(
+        pitch.abs() < 0.20 && roll.abs() < 0.20,
+        "tilt bounded after recovery"
+    );
     let pos = walker.position();
     assert!(pos.y > spec.body_height() * 0.5, "still standing");
 }
@@ -197,7 +247,9 @@ fn froude_scaling_speeds_follow_sqrt_scale() {
     let mut speeds = Vec::new();
     for scale in [1.0f32, 4.0] {
         let mut walker = Walker::new_at(spec, &ground, 0.0, 0.0, 0.0, scale);
-        run(&mut walker, &ground, 10.0, |_| WalkerCommand::sprint(Vec3::Z, 0.0));
+        run(&mut walker, &ground, 10.0, |_| {
+            WalkerCommand::sprint(Vec3::Z, 0.0)
+        });
         speeds.push(planar_speed(&walker));
     }
     let ratio = speeds[1] / speeds[0].max(0.01);
@@ -215,7 +267,9 @@ fn kinematic_tier_walks_and_alternates() {
     let ground = FlatGround;
     let mut walker = Walker::new(spec, &ground);
     walker.set_fidelity(Fidelity::Kinematic);
-    run(&mut walker, &ground, 8.0, |_| WalkerCommand::walk(Vec3::Z, 0.0));
+    run(&mut walker, &ground, 8.0, |_| {
+        WalkerCommand::walk(Vec3::Z, 0.0)
+    });
     let speed = planar_speed(&walker);
     assert!(
         (speed - spec.speed.walk).abs() < spec.speed.walk * 0.25,
@@ -232,7 +286,9 @@ fn fidelity_switch_is_continuous() {
     let spec = WalkerSpec::biped();
     let ground = FlatGround;
     let mut walker = Walker::new(spec, &ground);
-    run(&mut walker, &ground, 4.0, |_| WalkerCommand::walk(Vec3::Z, 0.0));
+    run(&mut walker, &ground, 4.0, |_| {
+        WalkerCommand::walk(Vec3::Z, 0.0)
+    });
     for fidelity in [Fidelity::Reduced, Fidelity::Kinematic, Fidelity::Full] {
         let before = walker.position();
         walker.set_fidelity(fidelity);
@@ -242,7 +298,9 @@ fn fidelity_switch_is_continuous() {
             jump < 0.40,
             "tier switch to {fidelity:?} popped: moved {jump:.3} in one tick"
         );
-        run(&mut walker, &ground, 1.0, |_| WalkerCommand::walk(Vec3::Z, 0.0));
+        run(&mut walker, &ground, 1.0, |_| {
+            WalkerCommand::walk(Vec3::Z, 0.0)
+        });
     }
 }
 

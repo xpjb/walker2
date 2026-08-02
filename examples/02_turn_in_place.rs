@@ -9,6 +9,9 @@
 //!
 //! Run: `cargo run --example 02_turn_in_place`
 
+mod shared;
+
+use shared::scenarios::{DT, TURN_IDLE_SECONDS, TURN_PHASE_SECONDS, TURN_TARGET_A, TURN_TARGET_B};
 use walker2::testkit::{write_trace_svg, Checks, FlatGround, Runner};
 use walker2::{Walker, WalkerCommand, WalkerSpec};
 
@@ -26,28 +29,52 @@ fn run() -> i32 {
     let ground = FlatGround;
     let spec = WalkerSpec::biped();
     let mut walker = Walker::new(spec, &ground);
-    let mut runner = Runner::new(1.0 / 60.0);
+    let mut runner = Runner::new(DT);
 
-    runner.run(&mut walker, &ground, 1.0, |_, _| WalkerCommand::IDLE);
+    runner.run(&mut walker, &ground, TURN_IDLE_SECONDS, |_, _| {
+        WalkerCommand::IDLE
+    });
     let steps_at_start = walker.validation().total_steps;
 
-    let target_a = 150f32.to_radians();
-    runner.run(&mut walker, &ground, 6.0, |_, _| WalkerCommand::face(target_a));
+    let target_a = TURN_TARGET_A;
+    runner.run(&mut walker, &ground, TURN_PHASE_SECONDS, |_, _| {
+        WalkerCommand::face(target_a)
+    });
     let steps_after_a = walker.validation().total_steps;
-    report_turn(&mut checks, &walker, "turn A (150deg)", target_a, steps_after_a - steps_at_start);
+    report_turn(
+        &mut checks,
+        &walker,
+        "turn A (150deg)",
+        target_a,
+        steps_after_a - steps_at_start,
+    );
 
-    let target_b = 30f32.to_radians();
-    runner.run(&mut walker, &ground, 6.0, |_, _| WalkerCommand::face(target_b));
+    let target_b = TURN_TARGET_B;
+    runner.run(&mut walker, &ground, TURN_PHASE_SECONDS, |_, _| {
+        WalkerCommand::face(target_b)
+    });
     let steps_after_b = walker.validation().total_steps;
-    report_turn(&mut checks, &walker, "turn B (30deg)", target_b, steps_after_b - steps_after_a);
+    report_turn(
+        &mut checks,
+        &walker,
+        "turn B (30deg)",
+        target_b,
+        steps_after_b - steps_after_a,
+    );
 
     checks.check_le(
         "drift while turning (m)",
-        walker.position().distance(glam::Vec3::new(0.0, walker.position().y, 0.0)),
+        walker
+            .position()
+            .distance(glam::Vec3::new(0.0, walker.position().y, 0.0)),
         1.5,
     );
     runner.print_reports();
-    let _ = write_trace_svg("target/traces/02_turn_in_place.svg", &runner, "02 turn in place (two turns)");
+    let _ = write_trace_svg(
+        "target/traces/02_turn_in_place.svg",
+        &runner,
+        "02 turn in place (two turns)",
+    );
     checks.finish("02_turn_in_place")
 }
 
@@ -63,9 +90,17 @@ fn report_turn(checks: &mut Checks, walker: &Walker, name: &str, target: f32, st
         .support_yaw
         .map(|sy| angle_delta(walker.yaw(), sy).abs())
         .unwrap_or(99.0);
-    checks.check_le(&format!("{name}: residual support twist (rad)"), twist, 0.50);
+    checks.check_le(
+        &format!("{name}: residual support twist (rad)"),
+        twist,
+        0.50,
+    );
     let right_axis = glam::Vec3::new(walker.yaw().cos(), 0.0, -walker.yaw().sin());
     let lateral = (sig.legs[1].foot - sig.legs[0].foot).dot(right_axis);
-    checks.check_ge(&format!("{name}: feet not crossed (lateral m)"), lateral, 0.2);
+    checks.check_ge(
+        &format!("{name}: feet not crossed (lateral m)"),
+        lateral,
+        0.2,
+    );
     println!("  {name}: steps={steps} twist={twist:.2} lateral={lateral:.2}");
 }

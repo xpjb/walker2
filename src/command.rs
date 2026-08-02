@@ -28,14 +28,25 @@ impl WalkerCommand {
     };
 
     pub fn face(face_yaw: f32) -> Self {
-        Self { face_yaw, ..Self::IDLE }
+        Self {
+            face_yaw,
+            ..Self::IDLE
+        }
     }
 
     pub fn walk(move_dir: Vec3, face_yaw: f32) -> Self {
-        Self { move_dir, face_yaw, sprint: false }
+        Self {
+            move_dir,
+            face_yaw,
+            sprint: false,
+        }
     }
 
     pub fn sprint(move_dir: Vec3, face_yaw: f32) -> Self {
-        Self { move_dir, face_yaw, sprint: true }
+        Self {
+            move_dir,
+            face_yaw,
+            sprint: true,
+        }
     }
 }

@@ -82,7 +82,13 @@ pub struct Runner {
 
 impl Runner {
     pub fn new(dt: f32) -> Self {
-        Self { dt, time: 0.0, samples: Vec::new(), plants: Vec::new(), reports: Vec::new() }
+        Self {
+            dt,
+            time: 0.0,
+            samples: Vec::new(),
+            plants: Vec::new(),
+            reports: Vec::new(),
+        }
     }
 
     pub fn run<G: GroundQuery>(
@@ -98,7 +104,11 @@ impl Runner {
             walker.step(ground, cmd, self.dt);
             self.time += self.dt;
             for f in walker.take_footfalls() {
-                self.plants.push(Plant { t: self.time, pos: f.pos, strength: f.strength });
+                self.plants.push(Plant {
+                    t: self.time,
+                    pos: f.pos,
+                    strength: f.strength,
+                });
             }
             if let Some(report) = walker.take_gait_report() {
                 self.reports.push(format!("[t={:6.2}] {report}", self.time));
@@ -129,7 +139,11 @@ impl Runner {
                 n += 1;
             }
         }
-        if n > 0 { sum / n as f32 } else { 0.0 }
+        if n > 0 {
+            sum / n as f32
+        } else {
+            0.0
+        }
     }
 
     pub fn max_tilt(&self) -> f32 {
@@ -183,11 +197,19 @@ impl Checks {
     }
 
     pub fn check_le(&mut self, name: &str, value: f32, limit: f32) {
-        self.check(name, value <= limit, format!("value {value:.3}, limit {limit:.3}"));
+        self.check(
+            name,
+            value <= limit,
+            format!("value {value:.3}, limit {limit:.3}"),
+        );
     }
 
     pub fn check_ge(&mut self, name: &str, value: f32, floor: f32) {
-        self.check(name, value >= floor, format!("value {value:.3}, floor {floor:.3}"));
+        self.check(
+            name,
+            value >= floor,
+            format!("value {value:.3}, floor {floor:.3}"),
+        );
     }
 
     pub fn all_passed(&self) -> bool {
@@ -203,7 +225,11 @@ impl Checks {
             "\n{title}: {passed}/{total} checks passed{}",
             if ok { "" } else { "  <-- FAILURES" }
         );
-        if ok { 0 } else { 1 }
+        if ok {
+            0
+        } else {
+            1
+        }
     }
 }
 
@@ -215,7 +241,11 @@ impl Checks {
 /// plants (orange/teal circles sized by strength), start marker. Open in
 /// any browser to eyeball stride pattern, straightness, and untwist
 /// behavior without a renderer.
-pub fn write_trace_svg(path: impl AsRef<Path>, runner: &Runner, title: &str) -> std::io::Result<()> {
+pub fn write_trace_svg(
+    path: impl AsRef<Path>,
+    runner: &Runner,
+    title: &str,
+) -> std::io::Result<()> {
     let path = path.as_ref();
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir)?;
