@@ -40,6 +40,8 @@ pub struct Morphology {
     pub shin_length: f32,
     pub ankle_length: f32,
     pub foot_length: f32,
+    pub heel_offset: f32,
+    pub ball_offset: f32,
     pub hunch: f32,
 }
 
@@ -68,6 +70,8 @@ impl ActorModel {
             shin_length: 0.48,
             ankle_length: 0.22,
             foot_length: 0.34,
+            heel_offset: -0.027,
+            ball_offset: 0.28,
             hunch: 0.03,
         };
         let mut parts = Vec::new();
@@ -200,6 +204,8 @@ impl ActorModel {
             shin_length: 0.74,
             ankle_length: 0.34,
             foot_length: 0.58,
+            heel_offset: -0.046,
+            ball_offset: 0.48,
             hunch: 0.26,
         };
         let mut parts = Vec::new();

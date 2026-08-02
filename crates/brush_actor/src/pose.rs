@@ -63,6 +63,7 @@ pub struct PoseDriver {
     initialized: bool,
     torso_twist: Spring,
     arm_swing: [Spring; 2],
+    foot_roll: [Spring; 2],
 }
 
 impl PoseDriver {
@@ -70,12 +71,7 @@ impl PoseDriver {
         Self::default()
     }
 
-    pub fn update(
-        &mut self,
-        walker: &Walker,
-        morphology: &Morphology,
-        dt: f32,
-    ) -> PosePalette {
+    pub fn update(&mut self, walker: &Walker, morphology: &Morphology, dt: f32) -> PosePalette {
         let signals = walker.signals();
         let left_chain = walker.leg_chain(0);
         let right_chain = walker.leg_chain(1);
@@ -85,24 +81,31 @@ impl PoseDriver {
             .support_yaw
             .map(|support| angle_delta(support, signals.yaw).clamp(-0.34, 0.34))
             .unwrap_or(0.0);
-        let twist_target =
-            self.torso_twist.value + angle_delta(raw_twist, self.torso_twist.value);
+        let twist_target = self.torso_twist.value + angle_delta(raw_twist, self.torso_twist.value);
         let left_foot_local = inverse_body * (left_chain.foot - signals.pos);
         let right_foot_local = inverse_body * (right_chain.foot - signals.pos);
         let swing_targets = [
             (-left_foot_local.z * 0.75).clamp(-0.65, 0.65),
             (-right_foot_local.z * 0.75).clamp(-0.65, 0.65),
         ];
+        let foot_roll_targets = [
+            foot_roll_target(&signals, &left_chain, morphology, 0),
+            foot_roll_target(&signals, &right_chain, morphology, 1),
+        ];
 
         if !self.initialized {
             self.torso_twist.snap(twist_target);
             self.arm_swing[0].snap(swing_targets[0]);
             self.arm_swing[1].snap(swing_targets[1]);
+            self.foot_roll[0].snap(foot_roll_targets[0]);
+            self.foot_roll[1].snap(foot_roll_targets[1]);
             self.initialized = true;
         } else {
             self.torso_twist.update(twist_target, 4.0, dt);
             self.arm_swing[0].update(swing_targets[0], 4.8, dt);
             self.arm_swing[1].update(swing_targets[1], 4.8, dt);
+            self.foot_roll[0].update(foot_roll_targets[0], 7.0, dt);
+            self.foot_roll[1].update(foot_roll_targets[1], 7.0, dt);
         }
 
         compose_pose(
@@ -112,10 +115,10 @@ impl PoseDriver {
             morphology,
             self.torso_twist.value,
             [self.arm_swing[0].value, self.arm_swing[1].value],
+            [self.foot_roll[0].value, self.foot_roll[1].value],
         )
     }
 }
-
 
 pub fn pose_walker(walker: &Walker, morphology: &Morphology) -> PosePalette {
     let signals = walker.signals();
@@ -130,6 +133,10 @@ pub fn pose_walker(walker: &Walker, morphology: &Morphology) -> PosePalette {
         (-(inverse_body * (left_chain.foot - signals.pos)).z * 0.75).clamp(-0.65, 0.65),
         (-(inverse_body * (right_chain.foot - signals.pos)).z * 0.75).clamp(-0.65, 0.65),
     ];
+    let foot_roll = [
+        foot_roll_target(&signals, &left_chain, morphology, 0),
+        foot_roll_target(&signals, &right_chain, morphology, 1),
+    ];
     compose_pose(
         &signals,
         &left_chain,
@@ -137,6 +144,7 @@ pub fn pose_walker(walker: &Walker, morphology: &Morphology) -> PosePalette {
         morphology,
         support_twist,
         arm_swing,
+        foot_roll,
     )
 }
 
@@ -147,13 +155,13 @@ fn compose_pose(
     morphology: &Morphology,
     support_twist: f32,
     arm_swing: [f32; 2],
+    foot_roll: [f32; 2],
 ) -> PosePalette {
     let body_rotation = body_rotation(signals);
     let body = Mat4::from_rotation_translation(body_rotation, signals.pos);
     let mut pose = PosePalette::default();
 
-    let pelvis_local =
-        Mat4::from_translation(Vec3::new(0.0, -morphology.torso_height * 0.42, 0.0));
+    let pelvis_local = Mat4::from_translation(Vec3::new(0.0, -morphology.torso_height * 0.42, 0.0));
     pose.transforms[Bone::Pelvis as usize] = body * pelvis_local;
 
     let torso_local = Mat4::from_translation(Vec3::new(0.0, 0.02, 0.0))
@@ -195,6 +203,7 @@ fn compose_pose(
             Bone::LeftAnkle,
             Bone::LeftFoot,
         ],
+        foot_roll[0],
         signals.yaw,
     );
     pose_leg(
@@ -207,6 +216,7 @@ fn compose_pose(
             Bone::RightAnkle,
             Bone::RightFoot,
         ],
+        foot_roll[1],
         signals.yaw,
     );
 
@@ -218,7 +228,6 @@ fn body_rotation(signals: &walker2::RigSignals) -> Quat {
         * Quat::from_rotation_z(signals.roll)
         * Quat::from_rotation_x(signals.pitch)
 }
-
 
 fn pose_arm(
     pose: &mut PosePalette,
@@ -254,25 +263,76 @@ fn pose_leg(
     chain: &walker2::LegChain,
     morphology: &Morphology,
     bones: [Bone; 4],
+    foot_roll: f32,
     yaw: f32,
 ) {
-    let (knee, lower_split) = solve_two_bone_leg(chain.hip, chain.foot, morphology, yaw);
+    let (ankle, foot_transform) = rolled_foot_transform(chain.foot, yaw, foot_roll, morphology);
+    let (knee, lower_split) = solve_two_bone_leg(chain.hip, ankle, morphology, yaw);
     pose.transforms[bones[0] as usize] =
         segment_transform(chain.hip, knee, morphology.thigh_length);
     pose.transforms[bones[1] as usize] =
         segment_transform(knee, lower_split, morphology.shin_length);
     pose.transforms[bones[2] as usize] =
-        segment_transform(lower_split, chain.foot, morphology.ankle_length);
-    pose.transforms[bones[3] as usize] =
-        Mat4::from_rotation_translation(Quat::from_rotation_y(yaw), chain.foot);
+        segment_transform(lower_split, ankle, morphology.ankle_length);
+    pose.transforms[bones[3] as usize] = foot_transform;
 }
 
-fn solve_two_bone_leg(
-    hip: Vec3,
-    foot: Vec3,
+fn foot_roll_target(
+    signals: &walker2::RigSignals,
+    chain: &walker2::LegChain,
     morphology: &Morphology,
+    leg: usize,
+) -> f32 {
+    let facing = Quat::from_rotation_y(signals.yaw);
+    let planar_velocity = Vec3::new(signals.vel.x, 0.0, signals.vel.z);
+    let local_velocity = facing.conjugate() * planar_velocity;
+    let forward_speed = local_velocity.z.max(0.0);
+    let lateral_speed = local_velocity.x.abs();
+    let direction_weight = (forward_speed / (forward_speed + lateral_speed + 1.0e-4)).powi(2);
+    let speed_weight = (forward_speed / (morphology.foot_length * 3.0).max(1.0e-4)).clamp(0.0, 1.0);
+    let weight = direction_weight * speed_weight;
+
+    if !signals.legs[leg].contact {
+        let t = signals.legs[leg].swing_t;
+        let push_off = 0.42 * (1.0 - smoothstep(0.0, 0.32, t));
+        let toe_clearance = -0.24 * smoothstep(0.18, 0.72, t);
+        return (push_off + toe_clearance) * weight;
+    }
+
+    let foot_local = facing.conjugate() * (chain.foot - signals.pos);
+    let support_position = foot_local.z / (morphology.foot_length * 1.35).max(1.0e-4);
+    if support_position >= 0.0 {
+        -0.32 * smoothstep(0.08, 0.85, support_position) * weight
+    } else {
+        0.42 * smoothstep(0.10, 0.85, -support_position) * weight
+    }
+}
+
+fn rolled_foot_transform(
+    flat_origin: Vec3,
     yaw: f32,
-) -> (Vec3, Vec3) {
+    pitch: f32,
+    morphology: &Morphology,
+) -> (Vec3, Mat4) {
+    let yaw_rotation = Quat::from_rotation_y(yaw);
+    let rotation = yaw_rotation * Quat::from_rotation_x(pitch);
+    let pivot_z = if pitch > 0.0 {
+        morphology.ball_offset
+    } else {
+        morphology.heel_offset
+    };
+    let local_pivot = Vec3::Z * pivot_z;
+    let pivot = flat_origin + yaw_rotation * local_pivot;
+    let ankle = pivot - rotation * local_pivot;
+    (ankle, Mat4::from_rotation_translation(rotation, ankle))
+}
+
+fn smoothstep(start: f32, end: f32, value: f32) -> f32 {
+    let t = ((value - start) / (end - start)).clamp(0.0, 1.0);
+    t * t * (3.0 - 2.0 * t)
+}
+
+fn solve_two_bone_leg(hip: Vec3, foot: Vec3, morphology: &Morphology, yaw: f32) -> (Vec3, Vec3) {
     let delta = foot - hip;
     let distance = delta.length().max(1.0e-4);
     let direction = delta / distance;

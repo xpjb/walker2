@@ -115,10 +115,16 @@ human-review artifacts, not pixel-equality tests.
 ### Brush actor consumer
 
 The workspace member `brush_actor` compiles convex planar brushes into
-bone-local meshes, provides parameterized marine and ogre recipes, and maps
-`Walker::leg_chain()` plus `RigSignals` into a rigid character skeleton. Its
-`actor_lab` example uses the sibling `chad` crate for interactive wgpu
-presentation and native headless screenshots.
+bone-local meshes and provides parameterized marine and ogre recipes. Its
+walker adapter turns each `LegChain` into a conventional hip-knee-ankle
+character leg. `PoseDriver` adds a direction-aware rigid-boot rocker: forward
+steps arrive on a virtual heel, pass through foot-flat, and lift around a
+virtual forefoot ball; the resulting ankle target feeds the two-bone solve.
+Strafes and stationary turns suppress the forward roll. The driver also
+spring-smooths torso twist and arm swing, while the lab interpolates complete
+pose palettes for rendering. The ogre keeps scale-driven slower cadence without
+an unchecked absolute Froude speedup. The `actor_lab` example uses the sibling
+`chad` crate for interactive wgpu presentation and native headless screenshots.
 
 ```bash
 cargo run -p brush_actor --example actor_lab

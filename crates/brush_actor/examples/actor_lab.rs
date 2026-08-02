@@ -6,7 +6,7 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
 
-use brush_actor::{ActorModel, PoseDriver, PosePalette};
+use brush_actor::{ActorModel, Bone, PoseDriver, PosePalette};
 use chad::winit::event::{ElementState, WindowEvent};
 use chad::winit::keyboard::{Key, NamedKey};
 use chad::{wgpu, ChadApp, Config, Ctx, Headless, Timestep};
@@ -99,9 +99,9 @@ impl LabScene {
         self.marine_pose =
             self.marine_pose_driver
                 .update(&self.marine, &self.marine_model.morphology, DT);
-        self.ogre_pose =
-            self.ogre_pose_driver
-                .update(&self.ogre, &self.ogre_model.morphology, DT);
+        self.ogre_pose = self
+            .ogre_pose_driver
+            .update(&self.ogre, &self.ogre_model.morphology, DT);
     }
 
     fn camera(&self, alternate: bool) -> Camera {
@@ -258,6 +258,13 @@ fn capture(path: &Path, seconds: f32) -> Result<(), Box<dyn Error>> {
         scene.ogre.position().z / elapsed,
         scene.ogre.validation().total_steps as f32 / elapsed,
     );
+    println!(
+        "foot pitch: marine [{:+.1}, {:+.1}] deg | ogre [{:+.1}, {:+.1}] deg",
+        foot_pitch(&scene.marine_pose, Bone::LeftFoot),
+        foot_pitch(&scene.marine_pose, Bone::RightFoot),
+        foot_pitch(&scene.ogre_pose, Bone::LeftFoot),
+        foot_pitch(&scene.ogre_pose, Bone::RightFoot),
+    );
     let mut renderer = GpuRenderer::new(&gpu.device, gpu.format, SIZE);
     let actors = [
         (&scene.marine_model, &scene.marine_pose),
@@ -275,6 +282,13 @@ fn capture(path: &Path, seconds: f32) -> Result<(), Box<dyn Error>> {
     write_png(path, &rgba, SIZE)?;
     println!("capture written: {}", path.display());
     Ok(())
+}
+
+fn foot_pitch(pose: &PosePalette, bone: Bone) -> f32 {
+    let forward = pose.transforms[bone as usize]
+        .transform_vector3(Vec3::Z)
+        .normalize_or_zero();
+    (-forward.y).clamp(-1.0, 1.0).asin().to_degrees()
 }
 
 fn write_png(path: &Path, rgba: &[u8], size: (u32, u32)) -> Result<(), Box<dyn Error>> {

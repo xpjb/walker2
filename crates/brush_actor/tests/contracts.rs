@@ -100,18 +100,12 @@ fn persistent_pose_driver_removes_plant_discontinuities() {
         let direct = pose_walker(&walker, &model.morphology);
         let smooth = driver.update(&walker, &model.morphology, 1.0 / 60.0);
         if let Some(previous) = &previous_direct {
-            max_direct_arm_step = max_direct_arm_step.max(rotation_step(
-                previous,
-                &direct,
-                Bone::LeftUpperArm,
-            ));
+            max_direct_arm_step =
+                max_direct_arm_step.max(rotation_step(previous, &direct, Bone::LeftUpperArm));
         }
         if let Some(previous) = &previous_smooth {
-            max_smooth_arm_step = max_smooth_arm_step.max(rotation_step(
-                previous,
-                &smooth,
-                Bone::LeftUpperArm,
-            ));
+            max_smooth_arm_step =
+                max_smooth_arm_step.max(rotation_step(previous, &smooth, Bone::LeftUpperArm));
             max_smooth_torso_step =
                 max_smooth_torso_step.max(rotation_step(previous, &smooth, Bone::Torso));
         }
